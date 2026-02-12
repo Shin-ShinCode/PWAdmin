@@ -74,7 +74,7 @@ export const PWApiService = {
   createFaction: async (name: string, masterId: number): Promise<boolean> => await callApi('criar-clã', { name, masterId }),
 
   // --- SEGURANÇA E DASHBOARD ---
-  getDashboardStats: async (): Promise<DashboardStats[]> => await callApi('stats-servidor') || [],
+  getDashboardStats: async (): Promise<DashboardStats> => await callApi('stats-servidor'),
   getSecurityThreats: async (): Promise<ThreatLog[]> => await callApi('threats') || [],
   getAuditLogs: async (): Promise<AuditEntry[]> => await callApi('audit') || [],
   

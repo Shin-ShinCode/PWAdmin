@@ -2,13 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   UserCog, XCircle, Info, Activity, Package, Sword, Archive, Scroll, 
-  Save, MapPin, Key, Coins, Zap, Hash, User, 
-  Star, ArrowUpCircle, DollarSign, Shirt, ShieldCheck, Database
+  Save, ShieldCheck
 } from 'lucide-react';
-import { PWRole, FieldDefinition, Language, TRANSLATIONS, PW_DATA, PW_CULTIVATIONS } from '../../types';
+import { PWRole, FieldDefinition, Language, TRANSLATIONS, PW_DATA } from '../../types';
 import InventoryGrid from './InventoryGrid';
 import { getVersionSchema } from '../../pwSchema';
-import { PWApiService } from '../../services/pwApi';
 
 interface AccountEditorProps {
   role: PWRole;
@@ -51,78 +49,73 @@ export const AccountEditor: React.FC<AccountEditorProps> = ({ role, onClose, onS
     if (field.type === 'octets') {
       return (
         <div key={field.key} className="col-span-2 group">
-          <label className="block text-[10px] text-purple-400 uppercase mb-1 font-black tracking-widest group-focus-within:text-purple-300">{field.label || field.key}</label>
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{field.label || field.key}</label>
           <textarea 
             rows={2} 
             defaultValue={value} 
             readOnly={field.readonly} 
             onChange={(e) => handleFieldChange(section, field.key, e.target.value, field.type)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-purple-300 font-mono text-[11px] outline-none focus:border-purple-500 shadow-inner resize-none transition-all" 
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono text-xs outline-none focus:border-cyan-500 shadow-inner resize-none transition-all" 
           />
         </div>
       );
     }
     return (
       <div key={field.key} className="group">
-        <label className="block text-[10px] text-slate-500 uppercase mb-1 font-black tracking-widest group-focus-within:text-cyan-500 transition-colors">{field.label || field.key}</label>
+        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">{field.label || field.key}</label>
         <input 
             type={['int','float','byte','short','cuint','lint'].includes(field.type) ? 'number' : 'text'} 
             value={value} 
             readOnly={field.readonly} 
             onChange={(e) => handleFieldChange(section, field.key, e.target.value, field.type)}
-            className={`w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white font-bold outline-none focus:border-cyan-500 transition-all ${field.readonly ? 'opacity-40 cursor-not-allowed bg-slate-900' : 'hover:border-slate-600'}`} 
+            className={`w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white font-bold outline-none focus:border-cyan-500 transition-all ${field.readonly ? 'opacity-40 cursor-not-allowed bg-slate-900' : 'hover:border-slate-600'}`} 
         />
       </div>
     );
   };
 
   return (
-    <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 backdrop-blur-md p-4">
-      <div className="bg-slate-900 border border-slate-700/50 w-full max-w-7xl h-[95vh] flex flex-col rounded-[2.5rem] shadow-2xl overflow-hidden animate-fadeIn relative">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-7xl h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden animate-fadeIn relative">
         
-        {/* Animated Background Accent */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/5 blur-[120px] rounded-full pointer-events-none"></div>
-
         {/* Header */}
-        <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 backdrop-blur-xl z-10">
-          <div className="flex items-center space-x-6">
-            <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-4 rounded-[1.5rem] shadow-xl shadow-cyan-900/20"><UserCog className="w-8 h-8 text-white" /></div>
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-900 z-10">
+          <div className="flex items-center space-x-4">
+            <div className="bg-cyan-600/10 p-3 rounded-full border border-cyan-500/20"><UserCog className="w-6 h-6 text-cyan-400" /></div>
             <div>
-              <h2 className="text-3xl font-black text-white tracking-tighter uppercase leading-none">{editingRole.base.name}</h2>
-              <div className="flex items-center space-x-4 text-[10px] mt-2 font-black uppercase tracking-widest">
-                <span className="text-slate-500 font-mono tracking-normal">DB_ID: {editingRole.base.id}</span>
-                <span className="text-slate-700">|</span>
-                <span className="text-cyan-500">{PW_DATA.classes.find(c => c.id === editingRole.base.cls)?.[lang]}</span>
-                <span className="text-slate-700">|</span>
-                <div className="flex items-center bg-cyan-950/40 px-2 py-0.5 rounded-full border border-cyan-500/20 text-cyan-400">LVL {editingRole.status.level}</div>
+              <h2 className="text-xl font-bold text-white">Editor de Personagem</h2>
+              <div className="flex items-center space-x-3 text-xs mt-1">
+                <span className="text-slate-500">ID: {editingRole.base.id}</span>
+                <span className="text-slate-600">|</span>
+                <span className="text-slate-500">Login: {editingRole.user_login}</span>
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 bg-slate-800 hover:bg-red-500/20 rounded-2xl transition-all hover:rotate-90 group">
-            <XCircle className="w-8 h-8 text-slate-500 group-hover:text-red-500" />
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition-colors group">
+            <XCircle className="w-6 h-6 text-slate-500 group-hover:text-white" />
           </button>
         </div>
 
         {/* Content Tabs */}
         <div className="flex flex-1 overflow-hidden z-10">
-          <div className="w-72 bg-slate-950/40 border-r border-slate-800 p-6 space-y-2 shrink-0">
+          <div className="w-64 bg-slate-950/50 border-r border-slate-800 p-4 space-y-1 shrink-0">
             {[
-                { id: 'basic', icon: Info, label: 'Base Info' },
-                { id: 'status', icon: Activity, label: 'Status & Realms' },
-                { id: 'pocket', icon: Package, label: 'Pocket (Inventário)' },
-                { id: 'equipment', icon: Sword, label: 'Equipment Grid' },
+                { id: 'basic', icon: Info, label: 'Informações Básicas' },
+                { id: 'status', icon: Activity, label: 'Status / Atributos' },
+                { id: 'pocket', icon: Package, label: 'Inventário' },
+                { id: 'equipment', icon: Sword, label: 'Equipamentos' },
                 { id: 'storehouse', icon: Archive, label: 'Banco / Fashion' },
-                { id: 'task', icon: Scroll, label: 'Quests & Missões' }
+                { id: 'task', icon: Scroll, label: 'Quests' }
             ].map(tab => (
-               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`w-full text-left px-5 py-4 rounded-2xl flex items-center space-x-4 transition-all ${activeTab === tab.id ? 'bg-cyan-600/10 border border-cyan-500/30 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-800/50 hover:text-slate-300'}`}>
-                  <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-cyan-400' : ''}`} />
-                  <span className="font-black uppercase tracking-widest text-[11px]">{tab.label}</span>
+               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 transition-all ${activeTab === tab.id ? 'bg-cyan-600/10 border-l-2 border-cyan-400 text-white' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'}`}>
+                  <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-cyan-400' : ''}`} />
+                  <span className="font-bold text-xs">{tab.label}</span>
                </button>
             ))}
             
-            <div className="pt-6 mt-6 border-t border-slate-800 space-y-4">
-                <div className="px-4 py-3 bg-slate-900/50 rounded-2xl border border-slate-800">
-                    <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest mb-1">Status Protocolo</p>
+            <div className="pt-4 mt-4 border-t border-slate-800">
+                <div className="px-3 py-2 bg-slate-900/50 rounded-lg border border-slate-800">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Status Protocolo</p>
                     <div className="flex items-center text-emerald-500 text-[10px] font-bold">
                         <ShieldCheck className="w-3 h-3 mr-1" /> GamedBD Synced
                     </div>
@@ -130,19 +123,29 @@ export const AccountEditor: React.FC<AccountEditorProps> = ({ role, onClose, onS
             </div>
           </div>
 
-          <div className="flex-1 p-10 overflow-y-auto bg-slate-900/30 custom-scrollbar">
+          <div className="flex-1 p-8 overflow-y-auto bg-slate-900 custom-scrollbar">
             {activeTab === 'basic' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-fadeIn">
-                  {schema.role.base.map(field => renderField(field, 'base'))}
+              <div className="space-y-6">
+                 <h3 className="text-white font-bold text-lg mb-4">Base Info (role.base)</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+                    {schema.role.base.map(field => renderField(field, 'base'))}
+                 </div>
               </div>
             )}
             {activeTab === 'status' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-fadeIn">
-                  {schema.role.status.map(field => renderField(field, 'status'))}
+               <div className="space-y-6">
+                 <h3 className="text-white font-bold text-lg mb-4">Status & Attributes (role.status)</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+                    {schema.role.status.map(field => renderField(field, 'status'))}
+                 </div>
               </div>
             )}
             {activeTab === 'pocket' && (
-               <InventoryGrid items={editingRole.pocket.inv} title="Pocket Slots" lang={lang} 
+               <InventoryGrid 
+                items={editingRole.pocket.inv} 
+                title="Pocket & Inventory (role.pocket)" 
+                lang={lang} 
+                money={editingRole.pocket.money}
                 onUpdateItem={(pos, it) => setEditingRole({...editingRole, pocket: {...editingRole.pocket, inv: editingRole.pocket.inv.map(x => x.pos === pos ? it : x)}})}
                />
             )}
@@ -151,8 +154,8 @@ export const AccountEditor: React.FC<AccountEditorProps> = ({ role, onClose, onS
                    {SLOT_ORDER.map(slotPos => {
                        const item = editingRole.equipment.eqp.find(it => it.pos === slotPos);
                        return (
-                           <div key={slotPos} className={`bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center space-x-4 ${item ? 'hover:border-cyan-500/50 shadow-lg' : 'opacity-30'} transition-all`}>
-                               <div className="w-12 h-12 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-center font-mono text-[9px] text-slate-600 uppercase text-center leading-tight">{EQUIP_SLOTS[slotPos] || 'Slot'}</div>
+                           <div key={slotPos} className={`bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex items-center space-x-4 ${item ? 'hover:border-cyan-500/50 shadow-lg' : 'opacity-40'} transition-all`}>
+                               <div className="w-10 h-10 bg-slate-950 rounded-lg border border-slate-700 flex items-center justify-center font-mono text-[9px] text-slate-500 uppercase text-center leading-tight">{EQUIP_SLOTS[slotPos] || 'Slot'}</div>
                                <div className="flex-1 min-w-0">
                                    <div className="text-white font-bold text-sm truncate">{item ? (item.name || `Item ${item.id}`) : 'Vazio'}</div>
                                    {item && <div className="text-[10px] text-slate-500 font-mono">ID: {item.id}</div>}
@@ -164,8 +167,8 @@ export const AccountEditor: React.FC<AccountEditorProps> = ({ role, onClose, onS
             )}
             {activeTab === 'storehouse' && (
                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 animate-fadeIn">
-                    <InventoryGrid items={editingRole.storehouse.store} title="Bank Slots" icon={Archive} lang={lang} />
-                    <InventoryGrid items={editingRole.storehouse.dress} title="Fashion Wardrobe" icon={Shirt} lang={lang} />
+                    <InventoryGrid items={editingRole.storehouse.store} title="Banco" icon={Archive} lang={lang} />
+                    <InventoryGrid items={editingRole.storehouse.dress} title="Guarda-Roupa (Fashion)" icon={Sword} lang={lang} />
                </div>
             )}
             {activeTab === 'task' && (
@@ -180,10 +183,10 @@ export const AccountEditor: React.FC<AccountEditorProps> = ({ role, onClose, onS
         </div>
 
         {/* Footer */}
-        <div className="p-8 border-t border-slate-800 flex justify-end space-x-4 bg-slate-900/80 backdrop-blur shrink-0 z-10">
-          <button onClick={onClose} className="px-8 py-4 text-slate-500 hover:text-white font-black uppercase tracking-[0.2em] text-[11px] transition-colors">{t('cancel')}</button>
-          <button onClick={() => onSave(editingRole)} className="px-12 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black uppercase tracking-[0.2em] text-[11px] rounded-2xl shadow-2xl shadow-cyan-900/40 transition-all hover:-translate-y-1 active:scale-95 flex items-center">
-            <Save className="w-4 h-4 mr-3" /> Aplicar Mudanças Estruturais
+        <div className="p-6 border-t border-slate-800 flex justify-end space-x-4 bg-slate-900 z-10">
+          <button onClick={onClose} className="px-6 py-2 text-slate-400 hover:text-white font-bold text-sm transition-colors">{t('cancel')}</button>
+          <button onClick={() => onSave(editingRole)} className="px-8 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm rounded-lg shadow-lg transition-all flex items-center">
+            <Save className="w-4 h-4 mr-2" /> Salvar
           </button>
         </div>
       </div>

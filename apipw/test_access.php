@@ -2,73 +2,159 @@
 header('Content-Type: text/plain; charset=utf-8');
 require_once('config.php');
 
-echo "=== DIAGNÓSTICO DE ACESSO AO SERVIDOR ===\n";
+echo "=== DIAGNÓSTICO AVANÇADO DE INFRAESTRUTURA PW ===\n";
 echo "Data: " . date('Y-m-d H:i:s') . "\n";
-echo "Sistema Operacional: " . PHP_OS . " (" . php_uname() . ")\n";
-echo "Usuário do PHP: " . exec('whoami') . "\n";
-echo "----------------------------------------\n\n";
+echo "Sistema: " . PHP_OS . " (" . php_uname() . ")\n";
+echo "Usuário PHP: " . exec('whoami') . " | UID: " . getmyuid() . "\n";
+echo "Servidor Alvo: " . $configs['ip'] . "\n";
+echo "------------------------------------------------\n\n";
 
-// 1. TESTE DE EXECUÇÃO DE COMANDOS (SHELL)
-echo "[1] TESTE DE COMANDOS SHELL (PIDs)...\n";
-if (!function_exists('shell_exec')) {
-    echo "[ERRO] A função 'shell_exec' está desabilitada no PHP. O painel não conseguirá ver os processos.\n";
-} else {
-    echo "[OK] 'shell_exec' está habilitado.\n";
+// --- HELPERS ---
+function checkProcess($name, $alias = '') {
+    $pid = trim(shell_exec("pgrep -f $name"));
+    $status = $pid ? "[ONLINE]" : "[OFFLINE]";
+    $color = $pid ? "PASS" : "FAIL";
+    $pidInfo = $pid ? "(PID: $pid)" : "";
+    $mem = $pid ? trim(shell_exec("ps -p $pid -o %mem | tail -1")) . "%" : "0%";
+    $cpu = $pid ? trim(shell_exec("ps -p $pid -o %cpu | tail -1")) . "%" : "0%";
     
-    $services = ['gamedbd', 'gdeliveryd', 'glinkd', 'uniquanamed'];
-    foreach ($services as $svc) {
-        $pid = trim(shell_exec("pgrep -f $svc"));
-        if ($pid) {
-            echo "   - $svc: ENCONTRADO (PID: $pid)\n";
-        } else {
-            echo "   - $svc: NÃO ENCONTRADO (O servidor está ligado? O usuário do PHP tem permissão para ver?)\n";
-            // Tenta listar processos de outra forma para debug
-            $check = shell_exec("ps aux | grep $svc | grep -v grep");
-            if ($check) echo "     (Mas aparece no 'ps aux': $check)\n";
-        }
+    // Check if process is listening on ports (if netstat/ss available)
+    $ports = "";
+    if ($pid) {
+        $ports = shell_exec("netstat -nlp | grep $pid | awk '{print $4}' | tr '\n' ' '");
+        $ports = $ports ? "Ports: $ports" : "";
     }
+
+    echo sprintf("%-20s %-10s %-15s CPU: %-6s RAM: %-6s %s\n", 
+        $alias ?: $name, $status, $pidInfo, $cpu, $mem, $ports);
+    
+    return $pid ? true : false;
+}
+
+function checkDir($path, $label) {
+    if (is_dir($path)) {
+        $perms = substr(sprintf('%o', fileperms($path)), -4);
+        $owner = posix_getpwuid(fileowner($path))['name'];
+        echo "[OK] $label: $path (Perms: $perms, Owner: $owner)\n";
+        
+        // Count files
+        $count = count(scandir($path)) - 2;
+        echo "     - Arquivos encontrados: $count\n";
+        return true;
+    } else {
+        echo "[ERRO] $label: $path não encontrado!\n";
+        return false;
+    }
+}
+
+// 1. ANÁLISE DE PROCESSOS CRÍTICOS (PW CORE)
+echo "[1] STATUS DOS PROCESSOS (CORE SERVICES)...\n";
+$services = [
+    'logservice'   => 'LOGSERVICE',
+    'uniquanamed'  => 'UNIQUENAMED',
+    'authd'        => 'AUTHD',
+    'gamedbd'      => 'GAMEDBD',
+    'gacd'         => 'GACD (AntiCheat)',
+    'gfactiond'    => 'GFACTIOND',
+    'gdeliveryd'   => 'GDELIVERYD',
+    'glinkd'       => 'GLINKD (Global)',
+    'gamed'        => 'GAMED (GS)',
+];
+
+$onlineCount = 0;
+foreach ($services as $proc => $alias) {
+    if (checkProcess($proc, $alias)) $onlineCount++;
+}
+echo "------------------------------------------------\n";
+echo "Resumo: $onlineCount / " . count($services) . " serviços online.\n\n";
+
+
+// 2. MAPAS E INSTÂNCIAS (GS)
+echo "[2] MONITORAMENTO DE MAPAS (GAMED)...\n";
+$gsPid = trim(shell_exec("pgrep -f gamed"));
+if ($gsPid) {
+    echo "Gamed (GS) está rodando (PID: $gsPid).\n";
+    echo "Tentando identificar instâncias de mapas ativos...\n";
+    
+    // Check open files by GS to find maps (advanced)
+    // gs usually opens map configuration files
+    $maps = shell_exec("lsof -p $gsPid | grep '/gamed/config/' | awk '{print $9}' | sort | uniq");
+    if ($maps) {
+        $mapCount = substr_count($maps, "\n");
+        echo "   - Instâncias detectadas: $mapCount\n";
+    } else {
+        echo "   - Não foi possível listar detalhes dos mapas (permissão lsof restrita?)\n";
+    }
+} else {
+    echo "[CRÍTICO] GAMED (GS) ESTÁ OFF! O MUNDO ESTÁ DESLIGADO.\n";
 }
 echo "\n";
 
-// 2. TESTE DE CONEXÃO COM BANCO DE DADOS
-echo "[2] TESTE DE BANCO DE DADOS (MySQL)...\n";
-$configs = getConfigs();
+
+// 3. ESTRUTURA DE ARQUIVOS
+echo "[3] VERIFICAÇÃO DE ESTRUTURA DE DIRETÓRIOS...\n";
+$pwRoot = '/home'; // Adjust based on common setups: /home, /root, /usr
+$candidates = ['$pwRoot/gamed', '$pwRoot/gamedbd', '/var/log/pw'];
+
+// Try to auto-detect PW root
+$detectedRoot = null;
+if (is_dir('/home/gamed')) $detectedRoot = '/home';
+elseif (is_dir('/root/gamed')) $detectedRoot = '/root';
+elseif (is_dir('/usr/gamed')) $detectedRoot = '/usr';
+
+if ($detectedRoot) {
+    echo "Raiz PW detectada em: $detectedRoot\n";
+    checkDir("$detectedRoot/gamed", "Game Server");
+    checkDir("$detectedRoot/gamedbd", "Database Server");
+    checkDir("$detectedRoot/uniquenamed", "Unique Name");
+    checkDir("$detectedRoot/gamed/logs", "Logs de Jogo");
+    checkDir("$detectedRoot/gamed/config", "Configurações");
+} else {
+    echo "[AVISO] Não foi possível detectar automaticamente a pasta raiz do servidor (padrão /home/gamed não encontrado).\n";
+}
+echo "\n";
+
+
+// 4. BANCO DE DADOS
+echo "[4] CONEXÃO MYSQL E INTEGRIDADE...\n";
 try {
     $dsn = "mysql:host=" . $configs['db_host'] . ";dbname=" . $configs['db_name'] . ";charset=utf8mb4";
     $pdo = new PDO($dsn, $configs['db_user'], $configs['db_pass']);
-    echo "[OK] Conexão MySQL realizada com sucesso!\n";
+    echo "[OK] Conexão MySQL: SUCESSO\n";
     
-    // Tenta listar tabelas
-    $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-    echo "   - Tabelas encontradas: " . count($tables) . "\n";
-    if (in_array('users', $tables)) echo "   - Tabela 'users': OK\n";
-    if (in_array('point', $tables)) echo "   - Tabela 'point': OK\n";
+    $res = $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
+    echo "   - Contas cadastradas: $res\n";
     
+    $res = $pdo->query("SELECT COUNT(*) FROM point")->fetchColumn();
+    echo "   - Registros de Cubi (point): $res\n";
+    
+    $res = $pdo->query("SELECT COUNT(*) FROM factions")->fetchColumn();
+    echo "   - Clãs criados: $res\n";
+    
+    // Check Procedures
+    $procs = $pdo->query("SHOW PROCEDURE STATUS WHERE Db = '" . $configs['db_name'] . "'")->fetchAll();
+    echo "   - Stored Procedures encontradas: " . count($procs) . "\n";
+    $hasAddUser = false;
+    foreach($procs as $p) { if($p['Name'] == 'adduser') $hasAddUser = true; }
+    echo "   - Procedure 'adduser': " . ($hasAddUser ? "OK" : "AUSENTE (Criação de conta pode falhar)") . "\n";
+
 } catch (Exception $e) {
-    echo "[ERRO] Falha ao conectar no MySQL: " . $e->getMessage() . "\n";
-    echo "   - Host configurado: " . $configs['db_host'] . "\n";
-    echo "   - Usuário configurado: " . $configs['db_user'] . "\n";
+    echo "[ERRO] MySQL: " . $e->getMessage() . "\n";
 }
 echo "\n";
 
-// 3. TESTE DE PERMISSÕES DE ARQUIVO
-echo "[3] TESTE DE LEITURA DE LOGS...\n";
-$logDirs = ['/home/gamed/logs', '/var/log/pw', '/root/gamed/logs']; // Ajuste conforme seu server
-$found = false;
-foreach ($logDirs as $dir) {
-    if (is_dir($dir)) {
-        echo "[OK] Diretório de logs encontrado: $dir\n";
-        if (is_readable($dir)) {
-            echo "   - Permissão de leitura: OK\n";
-        } else {
-            echo "   - [ERRO] Sem permissão de leitura!\n";
-        }
-        $found = true;
-        break;
-    }
-}
-if (!$found) echo "[AVISO] Nenhum diretório de logs padrão encontrado. (Isso afeta a leitura de logs, mas não o status).\n";
 
-echo "\n----------------------------------------\n";
-echo "FIM DO DIAGNÓSTICO";
+// 5. RECURSOS DO SISTEMA
+echo "[5] RECURSOS DO SERVIDOR...\n";
+$load = sys_getloadavg();
+echo "Load Average: " . implode(", ", $load) . "\n";
+
+$free = shell_exec("free -m");
+echo "Memória:\n$free\n";
+
+$disk = shell_exec("df -h /");
+echo "Disco:\n$disk\n";
+
+echo "\n================================================\n";
+echo "FIM DO RELATÓRIO AVANÇADO";
 ?>
