@@ -2,10 +2,16 @@
 function getConfigs() {
     return array(
         "token"      => '123456',       // DEVE SER IGUAL AO TOKEN NO services/pwApi.ts
-        "ip"         => "127.0.0.1",    // IP do Servidor PW
-        "conexao"    => "127.0.0.1:29000", // Porta do GamedBD ou Delivery
+        "ip"         => "95.111.235.239",    // IP do Servidor PW
+        "conexao"    => "95.111.235.239:29000", // Porta do GamedBD ou Delivery
         "versao"     => "156",          // Versão do seu PW
         "rede"       => "eth0",         // Interface de rede para o gráfico de tráfego
+        
+        // Credenciais SSH para Comandos Remotos
+        "ssh_host"   => "95.111.235.239",
+        "ssh_port"   => 22,
+        "ssh_user"   => "root",
+        "ssh_pass"   => "vjaDwK6V34k0FbFbiZRR"
     );
 }
 ?>
