@@ -114,9 +114,9 @@ export const PWApiService = {
   saveSystemUser: async (user: SystemUser): Promise<boolean> => false,
   saveServerSettings: async (settings: any): Promise<boolean> => false,
 
-  // --- RAW EDITOR ---
-  getRoleXml: async (id: number) => await callApi('get-xml', { userid: id }),
-  saveRoleXml: async (id: number, xml: string) => await callApi('save-xml', { userid: id, xml }),
+  // --- RAW EDITOR (JSON) ---
+  getRoleXml: async (id: number) => await callApi('get-role-data', { userid: id }),
+  saveRoleXml: async (id: number, xml: string) => await callApi('save-role-data', { userid: id, xml }),
 
   // --- LUA CONFIG MANAGER ---
   getLuaConfig: async (): Promise<string> => await callApi('get-lua-config'),

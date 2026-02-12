@@ -584,6 +584,55 @@ try {
             }
             break;
 
+        case 'get-xml':
+            // ALIAS for getting raw role data (legacy name)
+        case 'get-role-data':
+            if ($api) {
+                $roleId = (int)getParam('userid');
+                if ($roleId > 0) {
+                    $data = $api->getRole($roleId);
+                    if ($data) {
+                        $retorno['status'] = 1;
+                        // Return as JSON string to be displayed in editor
+                        $retorno['retorno'] = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                    } else {
+                        $retorno['status'] = 0;
+                        $retorno['error'] = "Dados não encontrados ou falha na leitura (GamedBD).";
+                    }
+                } else {
+                    $retorno['status'] = 0;
+                    $retorno['error'] = "ID inválido.";
+                }
+            }
+            break;
+
+        case 'save-xml':
+        case 'save-role-data':
+            if ($api) {
+                $roleId = (int)getParam('userid');
+                $jsonContent = getParam('xml'); // Using 'xml' param for compatibility
+                
+                if ($roleId > 0 && $jsonContent) {
+                    $data = json_decode($jsonContent, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        if ($api->putRole($roleId, $data)) {
+                            $retorno['status'] = 1;
+                            $retorno['retorno'] = true;
+                        } else {
+                            $retorno['status'] = 0;
+                            $retorno['error'] = "Falha ao salvar dados (GamedBD).";
+                        }
+                    } else {
+                        $retorno['status'] = 0;
+                        $retorno['error'] = "JSON inválido: " . json_last_error_msg();
+                    }
+                } else {
+                    $retorno['status'] = 0;
+                    $retorno['error'] = "Dados inválidos.";
+                }
+            }
+            break;
+
         case 'get-lua-config':
             $luaPath = '/PWServer/gamed/script.lua';
             if (PHP_OS_FAMILY === 'Linux') {

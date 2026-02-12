@@ -79,7 +79,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
         {/* Online Players */}
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 flex justify-between items-start group hover:border-cyan-500/30 transition-all">
           <div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Jogadores Online</p>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{lang === 'pt' ? 'Jogadores Online' : 'Online Players'}</p>
             <h3 className="text-3xl font-bold text-white mt-2">{currentStats.players || 0}</h3>
             <p className="text-emerald-400 text-xs mt-2 flex items-center font-medium">
               <Activity className="w-3 h-3 mr-1" /> +12% vs last hour
@@ -93,7 +93,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
         {/* CPU */}
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 flex justify-between items-start group hover:border-purple-500/30 transition-all">
           <div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Server CPU</p>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{lang === 'pt' ? 'CPU do Servidor' : 'Server CPU'}</p>
             <h3 className="text-3xl font-bold text-white mt-2">{(currentStats.cpu || 0).toFixed(0)}%</h3>
             <p className="text-slate-500 text-xs mt-2 font-medium">Core i9-9900K @ 4.8Ghz</p>
           </div>
@@ -105,7 +105,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
         {/* RAM & Swap */}
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 flex justify-between items-start group hover:border-orange-500/30 transition-all">
           <div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Memória & Swap</p>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{lang === 'pt' ? 'Memória & Swap' : 'Memory & Swap'}</p>
             <h3 className="text-3xl font-bold text-white mt-2">{(currentStats.ram || 0).toFixed(1)} GB</h3>
             <p className="text-slate-500 text-xs mt-2 font-medium">/ {(currentStats.ram_total || 16).toFixed(1)} GB (RAM)</p>
             <p className="text-slate-600 text-[10px] mt-1">Swap: {(currentStats.swap || 0).toFixed(1)} / {(currentStats.swap_total || 0).toFixed(1)} GB</p>
@@ -118,7 +118,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
         {/* Map Instances */}
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 flex justify-between items-start group hover:border-emerald-500/30 transition-all">
           <div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Map Instances</p>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">{lang === 'pt' ? 'Instâncias de Mapa' : 'Map Instances'}</p>
             <h3 className="text-3xl font-bold text-white mt-2">{instances.filter(i => i.status === 'online').length}</h3>
             <p className="text-emerald-400 text-xs mt-2 flex items-center font-medium">
               <CheckCircle className="w-3 h-3 mr-1" /> All Stable
@@ -133,7 +133,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50">
-          <h3 className="text-white font-bold mb-6">Carga do Servidor</h3>
+          <h3 className="text-white font-bold mb-6">{lang === 'pt' ? 'Carga do Servidor' : 'Server Load'}</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>

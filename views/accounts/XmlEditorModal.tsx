@@ -52,9 +52,9 @@ const XmlEditorModal: React.FC<XmlEditorModalProps> = ({ roleId, onClose, lang }
                 <FileCode className="w-10 h-10 text-orange-400" />
              </div>
              <div>
-               <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{t('xml_editor')}</h2>
+               <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Raw Data Editor (JSON)</h2>
                <div className="flex items-center text-[10px] text-slate-500 font-mono uppercase tracking-widest mt-1">
-                   <Zap className="w-3 h-3 mr-1 text-orange-500" /> RoleID: <span className="text-orange-300 ml-1">{roleId}</span> | Raw Octets Simulation
+                   <Zap className="w-3 h-3 mr-1 text-orange-500" /> RoleID: <span className="text-orange-300 ml-1">{roleId}</span> | Full Protocol Structure
                </div>
              </div>
           </div>
@@ -69,7 +69,7 @@ const XmlEditorModal: React.FC<XmlEditorModalProps> = ({ roleId, onClose, lang }
           {loading ? (
              <div className="absolute inset-0 flex flex-col items-center justify-center text-orange-400">
                  <Loader2 className="w-12 h-12 animate-spin mb-4" />
-                 <span className="font-mono text-sm uppercase tracking-widest">{t('loading_xml')}</span>
+                 <span className="font-mono text-sm uppercase tracking-widest">Loading Character Data...</span>
              </div>
           ) : (
              <textarea 
@@ -77,6 +77,7 @@ const XmlEditorModal: React.FC<XmlEditorModalProps> = ({ roleId, onClose, lang }
                value={xmlContent}
                onChange={(e) => setXmlContent(e.target.value)}
                spellCheck={false}
+               placeholder="// JSON Data will appear here..."
              />
           )}
         </div>
@@ -94,12 +95,12 @@ const XmlEditorModal: React.FC<XmlEditorModalProps> = ({ roleId, onClose, lang }
              {saved ? (
                  <>
                     <CheckCircle className="w-4 h-4 mr-3" />
-                    Protocol Saved
+                    Data Saved
                  </>
              ) : (
                  <>
                     <Save className="w-4 h-4 mr-3" />
-                    Commit XML Change
+                    Save Changes
                  </>
              )}
            </button>
