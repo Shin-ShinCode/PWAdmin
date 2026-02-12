@@ -52,6 +52,11 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
       players: 0, cpu: 0, ram: 0, ram_total: 16, swap: 0, swap_total: 4, net_in: 0, net_out: 0 
   };
 
+  const getPercentage = (val: number, total: number) => {
+    if (!total || total === 0) return 0;
+    return (val / total) * 100;
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
       {/* KPI Cards */}
@@ -60,7 +65,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t('online_players')}</p>
-              <h3 className="text-3xl font-black text-white mt-1 group-hover:text-cyan-400 transition-colors">{currentStats.players}</h3>
+              <h3 className="text-3xl font-black text-white mt-1 group-hover:text-cyan-400 transition-colors">{currentStats.players || 0}</h3>
               <p className="text-emerald-400 text-[10px] mt-2 flex items-center font-mono animate-pulse"><Activity className="w-3 h-3 mr-1" /> CORE SYNC ACTIVE</p>
             </div>
             <div className="p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/20"><Users className="w-6 h-6 text-cyan-400" /></div>
@@ -71,9 +76,9 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t('cpu')}</p>
-              <h3 className="text-3xl font-black text-white mt-1">{currentStats.cpu.toFixed(1)}%</h3>
+              <h3 className="text-3xl font-black text-white mt-1">{(currentStats.cpu || 0).toFixed(1)}%</h3>
               <div className="mt-3 w-32 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 transition-all duration-500" style={{width: `${currentStats.cpu}%`}}></div>
+                  <div className="h-full bg-purple-500 transition-all duration-500" style={{width: `${currentStats.cpu || 0}%`}}></div>
               </div>
             </div>
             <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20"><Cpu className="w-6 h-6 text-purple-400" /></div>
@@ -85,11 +90,11 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
           <div className="space-y-4">
               <div>
                   <div className="flex justify-between text-[10px] uppercase font-bold mb-1">
-                      <span className="text-cyan-400">RAM: {currentStats.ram}GB</span>
-                      <span className="text-slate-500">{currentStats.ram_total}GB</span>
+                      <span className="text-cyan-400">RAM: {currentStats.ram || 0}GB</span>
+                      <span className="text-slate-500">{currentStats.ram_total || 16}GB</span>
                   </div>
                   <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-cyan-500" style={{width: `${(currentStats.ram / currentStats.ram_total) * 100}%`}}></div>
+                      <div className="h-full bg-cyan-500" style={{width: `${getPercentage(currentStats.ram, currentStats.ram_total)}%`}}></div>
                   </div>
               </div>
           </div>
@@ -99,7 +104,7 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t('network_traffic')}</p>
-              <h3 className="text-2xl font-black text-white mt-1">{currentStats.net_in.toFixed(2)} <span className="text-xs text-slate-500">MB/s</span></h3>
+              <h3 className="text-2xl font-black text-white mt-1">{(currentStats.net_in || 0).toFixed(2)} <span className="text-xs text-slate-500">MB/s</span></h3>
               <div className="mt-2 text-[10px] text-blue-400 font-black uppercase tracking-tighter flex items-center">SECURITY HUB <Zap className="w-2.5 h-2.5 ml-1" /></div>
             </div>
             <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20 text-blue-400"><Wifi className="w-6 h-6" /></div>

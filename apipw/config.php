@@ -11,7 +11,13 @@ function getConfigs() {
         "ssh_host"   => "95.111.235.239",
         "ssh_port"   => 22,
         "ssh_user"   => "root",
-        "ssh_pass"   => "vjaDwK6V34k0FbFbiZRR"
+        "ssh_pass"   => "vjaDwK6V34k0FbFbiZRR",
+        
+        // Configurações do Banco de Dados MySQL (PW)
+        "db_host"    => "localhost", // Se o script rodar no servidor, use localhost
+        "db_user"    => "root",      // Usuário do MySQL
+        "db_pass"    => "root",      // Senha do MySQL (ajuste conforme necessário)
+        "db_name"    => "pw"         // Nome do banco de dados principal
     );
 }
 ?>
