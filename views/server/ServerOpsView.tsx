@@ -3,13 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     Power, Settings, FileText, Terminal, Trash2, RefreshCw, Folder, Save, 
     MessageSquare, Map as MapIcon, Activity, History, PlayCircle, StopCircle, 
-    LayoutList
+    LayoutList, ShieldCheck
 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../../types';
 import ChatMonitor from './ChatMonitor';
 import InstanceControl from './InstanceControl';
 import ServiceMonitor from './ServiceMonitor';
 import TradeLogView from './TradeLog';
+import { PWApiService } from '../../services/pwApi';
 
 interface ServerOpsProps {
   lang: Language;
@@ -20,42 +21,64 @@ export const ServerOpsView: React.FC<ServerOpsProps> = ({ lang }) => {
   const [activeTab, setActiveTab] = useState<'services' | 'instances' | 'console' | 'chat' | 'logs'>('services');
 
   const tabs = [
-    { id: 'services', icon: Activity, label: t('processes') },
-    { id: 'instances', icon: MapIcon, label: t('map_monitor') },
-    { id: 'console', icon: Terminal, label: t('console_output') },
-    { id: 'chat', icon: MessageSquare, label: t('chat_monitor') },
-    { id: 'logs', icon: History, label: t('trade_logs') }
+    { id: 'services', icon: Activity, label: t('processes'), color: 'emerald' },
+    { id: 'instances', icon: MapIcon, label: t('map_monitor'), color: 'cyan' },
+    { id: 'console', icon: Terminal, label: t('console_output'), color: 'slate' },
+    { id: 'chat', icon: MessageSquare, label: t('chat_monitor'), color: 'purple' },
+    { id: 'logs', icon: History, label: t('trade_logs'), color: 'orange' }
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-10">
-      {/* Tab Navigation */}
-      <div className="flex items-center space-x-1 bg-slate-900/50 p-1.5 rounded-2xl border border-slate-800 w-full md:w-fit overflow-x-auto custom-scrollbar">
-        {tabs.map(tab => (
-            <button 
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)} 
-                className={`flex-1 md:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 flex items-center justify-center whitespace-nowrap ${
-                    activeTab === tab.id 
-                    ? 'bg-cyan-600 text-white shadow-xl shadow-cyan-900/30' 
-                    : 'text-slate-500 hover:text-white hover:bg-slate-800'
-                }`}
-            >
-                <tab.icon className="w-4 h-4 mr-2" />
-                {tab.label}
-            </button>
-        ))}
+    <div className="space-y-8 animate-fadeIn pb-10">
+      
+      {/* Hero Section */}
+      <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl">
+          <div className="absolute top-0 right-0 p-10 opacity-5">
+              <ShieldCheck className="w-64 h-64 text-white" />
+          </div>
+          <div className="p-8 relative z-10">
+              <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">Central de Operações</h2>
+              <p className="text-slate-400 text-sm max-w-xl">
+                  Controle total sobre os processos do servidor, instâncias de mapa, logs de sistema e monitoramento em tempo real.
+              </p>
+          </div>
+          
+          {/* Tabs as Navigation Bar */}
+          <div className="flex overflow-x-auto bg-slate-950/50 backdrop-blur-md border-t border-slate-800 p-2 space-x-2">
+            {tabs.map((tab: any) => {
+                const isActive = activeTab === tab.id;
+                const colors: any = {
+                    emerald: isActive ? 'bg-emerald-600 text-white shadow-emerald-500/20' : 'hover:bg-emerald-500/10 text-slate-400 hover:text-emerald-400',
+                    cyan: isActive ? 'bg-cyan-600 text-white shadow-cyan-500/20' : 'hover:bg-cyan-500/10 text-slate-400 hover:text-cyan-400',
+                    slate: isActive ? 'bg-slate-600 text-white shadow-slate-500/20' : 'hover:bg-slate-700/50 text-slate-400 hover:text-slate-300',
+                    purple: isActive ? 'bg-purple-600 text-white shadow-purple-500/20' : 'hover:bg-purple-500/10 text-slate-400 hover:text-purple-400',
+                    orange: isActive ? 'bg-orange-600 text-white shadow-orange-500/20' : 'hover:bg-orange-500/10 text-slate-400 hover:text-orange-400',
+                };
+                
+                return (
+                    <button 
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`
+                            flex items-center px-6 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider shadow-lg whitespace-nowrap
+                            ${colors[tab.color]}
+                        `}
+                    >
+                        <tab.icon className={`w-4 h-4 mr-2 ${isActive ? 'animate-bounce-slow' : ''}`} />
+                        {tab.label}
+                    </button>
+                );
+            })}
+          </div>
       </div>
 
-      <div className="min-h-[600px]">
+      {/* Content Area */}
+      <div className="min-h-[600px] transition-all duration-500">
         {activeTab === 'services' && <ServiceMonitor lang={lang} />}
         {activeTab === 'instances' && <InstanceControl lang={lang} />}
         {activeTab === 'chat' && <ChatMonitor lang={lang} />}
         {activeTab === 'logs' && <TradeLogView lang={lang} />}
-        
-        {activeTab === 'console' && (
-            <ConsoleOutput lang={lang} />
-        )}
+        {activeTab === 'console' && <ConsoleOutput lang={lang} />}
       </div>
     </div>
   );
@@ -130,5 +153,3 @@ const ConsoleOutput = ({ lang }: { lang: Language }) => {
         </div>
     );
 }
-
-import { PWApiService } from '../../services/pwApi';

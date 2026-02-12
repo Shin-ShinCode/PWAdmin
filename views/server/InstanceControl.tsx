@@ -18,18 +18,25 @@ const InstanceControl: React.FC<InstanceControlProps> = ({ lang }) => {
   const loadInstances = async () => {
     if(instances.length === 0) setLoading(true);
     
-    const data = await PWApiService.getMapInstances();
+    try {
+        const data = await PWApiService.getMapInstances();
+        
+        if (data && Array.isArray(data)) {
+            // Mesclar e traduzir nomes
+            const mergedInstances = data.map(inst => ({
+                ...inst,
+                name: PW_DATA.maps[inst.id] ? (PW_DATA.maps[inst.id][lang] || PW_DATA.maps[inst.id]['en']) : (inst.name || inst.id)
+            }));
+            
+            // Ordenar alfabeticamente pelo nome traduzido
+            const sorted = mergedInstances.sort((a, b) => a.name.localeCompare(b.name, lang === 'pt' ? 'pt-BR' : 'en'));
+            
+            setInstances(sorted);
+        }
+    } catch (e) {
+        console.error(e);
+    }
     
-    // Mesclar e traduzir nomes
-    const mergedInstances = data.map(inst => ({
-        ...inst,
-        name: PW_DATA.maps[inst.id] ? (PW_DATA.maps[inst.id][lang] || PW_DATA.maps[inst.id]['en']) : inst.id
-    }));
-    
-    // Ordenar alfabeticamente pelo nome traduzido
-    const sorted = mergedInstances.sort((a, b) => a.name.localeCompare(b.name, lang === 'pt' ? 'pt-BR' : 'en'));
-    
-    setInstances(sorted);
     setLoading(false);
   };
 

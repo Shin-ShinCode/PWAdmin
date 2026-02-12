@@ -17,8 +17,13 @@ export const OnlinePlayersView: React.FC<OnlinePlayersViewProps> = ({ lang }) =>
 
   const loadData = async () => {
     setLoading(true);
-    const data = await PWApiService.getOnlineRolesFull();
-    setOnlineChars(data);
+    try {
+        const data = await PWApiService.getOnlineRolesFull();
+        // Garante que é array
+        setOnlineChars(Array.isArray(data) ? data : []);
+    } catch (e) {
+        setOnlineChars([]);
+    }
     setLoading(false);
   };
 

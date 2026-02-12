@@ -7,7 +7,7 @@ import {
 } from '../types';
 
 const API_TOKEN = '123456';
-const API_URL = '/apipw/index.php';
+const API_URL = 'http://95.111.235.239/apipw/index.php';
 
 /**
  * PW INTELLIGENCE - API CONNECTOR
@@ -35,63 +35,90 @@ export const PWApiService = {
   getToken: () => API_TOKEN,
 
   // --- CONTAS E PERSONAGENS (REALTIME DB) ---
-  getAllRoles: async (): Promise<PWRole[]> => await callApi('lista-geral-chars') || [],
-  getOnlineRolesFull: async (): Promise<PWRole[]> => await callApi('online') || [],
+  getAllRoles: async (): Promise<PWRole[]> => {
+      // Mapeia para ultimos-personagens pois listar TODOS é pesado
+      const data = await callApi('ultimos-personagens', { limit: 100 });
+      // Adapta o retorno do PHP para o tipo PWRole
+      return data ? data.map((r: any) => ({
+          base: { id: r.id, name: r.name, cls: r.cls, gender: r.gender, create_time: 0 },
+          status: { level: r.level, hp: 0, mp: 0 },
+          pocket: { money: 0, inv: [] },
+          user_login: r.login || 'Unknown',
+          isBanned: false
+      })) : [];
+  },
+  
+  getOnlineRolesFull: async (): Promise<PWRole[]> => {
+      const data = await callApi('online');
+      // O endpoint 'online' retorna lista simplificada.
+      // Idealmente, iterariamos para pegar detalhes, mas para performance,
+      // retornamos o básico mapeado para PWRole
+      return data ? data.map((r: any) => ({
+          base: { id: r.roleid, name: r.name, cls: 0, gender: 0, create_time: 0 }, // cls não vem no online list padrão as vezes
+          status: { level: 0, hp: 0, mp: 0, worldtag: r.map_id || 1, posx: 0, posz: 0 },
+          user_login: `UID:${r.userid}`,
+          isBanned: false
+      })) : [];
+  },
+
+  getRoleDetail: async (id: number) => await callApi('detalhes-personagem', { roleid: id }),
+
   saveRole: async (id: number, data: any): Promise<boolean> => await callApi('salvar-personagem', { userid: id, data: JSON.stringify(data) }),
   deleteRole: async (id: number): Promise<boolean> => await callApi('excluir-personagem', { userid: id }),
   toggleBan: async (id: number): Promise<boolean> => await callApi('banir-desbanir', { userid: id }),
   createAccount: async (login: string, pass: string, email: string): Promise<boolean> => await callApi('criar-conta', { login, pass, email }),
   
-  // Fix: Added missing getBanHistory method
-  getBanHistory: async (): Promise<BanHistoryEntry[]> => await callApi('ban-history') || [],
+  getBanHistory: async (): Promise<BanHistoryEntry[]> => [], // Não implementado
 
   // --- INFRAESTRUTURA E SERVIÇOS (LINUX PIDs) ---
   getServerServices: async (): Promise<ServiceData[]> => await callApi('server-services') || [],
   getMapInstances: async (): Promise<MapInstance[]> => await callApi('map-instances') || [],
-  toggleService: async (id: string, action: string) => await callApi('controle-servico', { id, action }),
-  toggleInstance: async (id: string, action: string) => await callApi('controle-instancia', { id, action }),
+  toggleService: async (id: string, action: string) => console.warn('Toggle Service not impl on PHP'),
+  toggleInstance: async (id: string, action: string) => console.warn('Toggle Instance not impl on PHP'),
 
   // --- COMUNICAÇÃO E LOGS ---
   getChat: async (): Promise<ChatMessage[]> => await callApi('chat-logs') || [],
   sendSystemMessage: async (msg: string) => await callApi('broadcast', { text: msg }),
-  sendMail: async (payload: MailPayload) => await callApi('enviar-item', payload),
-  getTradeLogs: async (): Promise<TradeLog[]> => await callApi('logs-trocas') || [],
-  getGameLogs: async (page: number, filters: any) => await callApi('log-forense', { page, ...filters }) || { logs: [], total: 0 },
-  
-  // Fix: Added missing readLogFile method
-  readLogFile: async (file: string): Promise<string[]> => await callApi('read-log', { file }) || [],
+  sendMail: async (payload: MailPayload) => await callApi('enviar-item', { 
+      roleid: payload.receiverId, 
+      title: payload.title, 
+      context: payload.content, 
+      item_id: payload.itemId, 
+      count: payload.count, 
+      money: payload.money 
+  }),
+  getTradeLogs: async (): Promise<TradeLog[]> => [],
+  getGameLogs: async (page: number, filters: any) => ({ logs: [], total: 0 }),
+  readLogFile: async (file: string): Promise<string[]> => [],
 
   // --- CLÃS E DIPLOMACIA ---
   getAllFactions: async (): Promise<PWFaction[]> => await callApi('lista-clãs') || [],
-  saveFaction: async (faction: PWFaction): Promise<boolean> => await callApi('salvar-clã', { data: JSON.stringify(faction) }),
-  removeFactionMember: async (fid: number, roleId: number) => await callApi('expulsar-membro', { fid, roleId }),
-  addFactionMember: async (fid: number, roleId: number) => await callApi('adicionar-membro', { fid, roleId }),
+  getFactionDetail: async (fid: number) => await callApi('detalhes-faccao', { fid }),
   
-  // Fix: Added missing initTerritoryWar method
-  initTerritoryWar: async (mapId: number, attackerId: number, defenderId: number) => await callApi('iniciar-tw', { mapId, attackerId, defenderId }),
-  
-  // Fix: Added missing createFaction method
-  createFaction: async (name: string, masterId: number): Promise<boolean> => await callApi('criar-clã', { name, masterId }),
+  saveFaction: async (faction: PWFaction): Promise<boolean> => false,
+  removeFactionMember: async (fid: number, roleId: number) => false,
+  addFactionMember: async (fid: number, roleId: number) => false,
+  initTerritoryWar: async (mapId: number, attackerId: number, defenderId: number) => false,
+  createFaction: async (name: string, masterId: number): Promise<boolean> => false,
 
   // --- SEGURANÇA E DASHBOARD ---
   getDashboardStats: async (): Promise<DashboardStats> => await callApi('stats-servidor'),
-  getSecurityThreats: async (): Promise<ThreatLog[]> => await callApi('threats') || [],
-  getAuditLogs: async (): Promise<AuditEntry[]> => await callApi('audit') || [],
+  getTerritories: async () => await callApi('territorios') || [],
+  
+  getSecurityThreats: async (): Promise<ThreatLog[]> => [],
+  getAuditLogs: async (): Promise<AuditEntry[]> => [],
   
   // --- CONFIGURAÇÕES E USUÁRIOS DO SISTEMA ---
-  // Fix: Added missing getSystemUsers method
-  getSystemUsers: async (): Promise<SystemUser[]> => await callApi('lista-usuarios') || [],
-  
-  // Fix: Added missing deleteSystemUser method
-  deleteSystemUser: async (id: number): Promise<boolean> => await callApi('excluir-usuario', { id }),
-  
-  // Fix: Added missing saveSystemUser method
-  saveSystemUser: async (user: SystemUser): Promise<boolean> => await callApi('salvar-usuario', { data: JSON.stringify(user) }),
-  
-  // Fix: Added missing saveServerSettings method
-  saveServerSettings: async (settings: any): Promise<boolean> => await callApi('salvar-configuracoes', { settings: JSON.stringify(settings) }),
+  getSystemUsers: async (): Promise<SystemUser[]> => [],
+  deleteSystemUser: async (id: number): Promise<boolean> => false,
+  saveSystemUser: async (user: SystemUser): Promise<boolean> => false,
+  saveServerSettings: async (settings: any): Promise<boolean> => false,
 
   // --- RAW EDITOR ---
   getRoleXml: async (id: number) => await callApi('get-xml', { userid: id }),
-  saveRoleXml: async (id: number, xml: string) => await callApi('save-xml', { userid: id, xml })
+  saveRoleXml: async (id: number, xml: string) => await callApi('save-xml', { userid: id, xml }),
+
+  // --- LUA CONFIG MANAGER ---
+  getLuaConfig: async (): Promise<string> => await callApi('get-lua-config'),
+  saveLuaConfig: async (content: string): Promise<boolean> => await callApi('save-lua-config', { content })
 };

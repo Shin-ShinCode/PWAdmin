@@ -21,22 +21,28 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
   const [loadingServices, setLoadingServices] = useState(false);
 
   const fetchData = async () => {
-    const sData = await PWApiService.getServerServices();
-    const mData = await PWApiService.getMapInstances();
-    const stats = await PWApiService.getDashboardStats();
-    
-    setServices(sData);
-    setInstances(mData.map(inst => ({
-        ...inst,
-        name: PW_DATA.maps[inst.id] ? (PW_DATA.maps[inst.id][lang] || PW_DATA.maps[inst.id]['en']) : inst.id
-    })));
-    
-    if (stats) {
-        setServerData(prev => {
-            const newData = [...prev, stats];
-            if (newData.length > 20) newData.shift();
-            return newData;
-        });
+    try {
+        const sData = await PWApiService.getServerServices();
+        const mData = await PWApiService.getMapInstances();
+        const stats = await PWApiService.getDashboardStats();
+        
+        if (sData && Array.isArray(sData)) setServices(sData);
+        if (mData && Array.isArray(mData)) {
+            setInstances(mData.map(inst => ({
+                ...inst,
+                name: PW_DATA.maps[inst.id] ? (PW_DATA.maps[inst.id][lang] || PW_DATA.maps[inst.id]['en']) : (inst.name || inst.id)
+            })));
+        }
+        
+        if (stats) {
+            setServerData(prev => {
+                const newData = [...prev, stats];
+                if (newData.length > 20) newData.shift();
+                return newData;
+            });
+        }
+    } catch (e) {
+        console.error("Erro dashboard update", e);
     }
   };
 
@@ -96,12 +102,13 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
           </div>
         </div>
 
-        {/* RAM */}
+        {/* RAM & Swap */}
         <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 flex justify-between items-start group hover:border-orange-500/30 transition-all">
           <div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Server RAM</p>
-            <h3 className="text-3xl font-bold text-white mt-2">{currentStats.ram || 0}GB</h3>
-            <p className="text-slate-500 text-xs mt-2 font-medium">of {currentStats.ram_total || 64}GB Total (DDR4)</p>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Memória & Swap</p>
+            <h3 className="text-3xl font-bold text-white mt-2">{(currentStats.ram || 0).toFixed(1)} GB</h3>
+            <p className="text-slate-500 text-xs mt-2 font-medium">/ {(currentStats.ram_total || 16).toFixed(1)} GB (RAM)</p>
+            <p className="text-slate-600 text-[10px] mt-1">Swap: {(currentStats.swap || 0).toFixed(1)} / {(currentStats.swap_total || 0).toFixed(1)} GB</p>
           </div>
           <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/20 text-orange-400">
             <HardDrive className="w-6 h-6" />

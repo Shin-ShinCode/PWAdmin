@@ -5,5 +5,5 @@ export const APP_CONFIG = {
   },
   version: '2.5.0 Final',
   api_token: '123456',
-  server_ip: '127.0.0.1'
+  server_ip: '95.111.235.239'
 };

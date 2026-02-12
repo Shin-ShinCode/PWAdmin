@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Database, Server, Save, CheckCircle, Loader2, Folder, FileText } from 'lucide-react';
 import { Language, TRANSLATIONS, ServerSettings } from '../../types';
+import { ServerConfigView } from './ServerConfigView';
 import UserManagement from './UserManagement';
 import { PWApiService } from '../../services/pwApi';
 
@@ -11,6 +12,7 @@ interface SettingsProps {
 
 export const SettingsView: React.FC<SettingsProps> = ({ lang }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const [activeTab, setActiveTab] = useState<'general' | 'lua' | 'users'>('general');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   
@@ -32,7 +34,26 @@ export const SettingsView: React.FC<SettingsProps> = ({ lang }) => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn pb-10">
+      
+      {/* Tabs */}
+      <div className="flex space-x-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800 w-fit">
+          <button onClick={() => setActiveTab('general')} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'general' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>
+              Geral
+          </button>
+          <button onClick={() => setActiveTab('lua')} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'lua' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>
+              Lua Config (Live)
+          </button>
+          <button onClick={() => setActiveTab('users')} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>
+              Usuários
+          </button>
+      </div>
+
+      {activeTab === 'lua' && <ServerConfigView lang={lang} />}
+      
+      {activeTab === 'users' && <UserManagement lang={lang} />}
+
+      {activeTab === 'general' && (
       <div className="glass-panel p-8 rounded-xl border border-slate-700">
         <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
           <Server className="w-6 h-6 mr-3 text-cyan-400" />
@@ -105,7 +126,7 @@ export const SettingsView: React.FC<SettingsProps> = ({ lang }) => {
         </div>
       </div>
       
-      <UserManagement lang={lang} />
+      )}
     </div>
   );
 };

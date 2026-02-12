@@ -14,8 +14,12 @@ const ServiceMonitor: React.FC<ServiceMonitorProps> = ({ lang }) => {
 
   const fetchServices = async () => {
     setLoading(true);
-    const data = await PWApiService.getServerServices();
-    if (data) setServices(data);
+    try {
+        const data = await PWApiService.getServerServices();
+        if (data && Array.isArray(data)) setServices(data);
+    } catch (e) {
+        console.error(e);
+    }
     setLoading(false);
   };
 
