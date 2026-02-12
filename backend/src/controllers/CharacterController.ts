@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database';
+import { CharacterService } from '../services/CharacterService';
 
 export const searchCharacters = async (req: Request, res: Response) => {
   try {
@@ -49,14 +50,15 @@ export const searchCharacters = async (req: Request, res: Response) => {
 export const getCharacterById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
-    const [rows]: any = await query('SELECT * FROM roles WHERE id = ?', [id]);
+    const charId = parseInt(id as string);
 
-    if (rows.length === 0) {
+    const role = await CharacterService.getCharacterDetail(charId);
+
+    if (!role) {
       return res.status(404).json({ error: 'Character not found' });
     }
 
-    res.json(rows[0]);
+    res.json(role);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
