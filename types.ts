@@ -225,6 +225,9 @@ export interface PWTerritory {
   color: number;
   battle_time: number;
   maxbonus: number;
+  challenger: number;
+  deposit?: number;
+  status?: number;
 }
 
 // MailPayload defines the parameters required for sending in-game messages through the API.

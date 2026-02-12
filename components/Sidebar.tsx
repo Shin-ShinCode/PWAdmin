@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Users, Server, Mail, Settings, Shield, Terminal } from 'lucide-react';
+import { LayoutDashboard, Users, Server, Mail, Settings, Shield, Terminal, Flag } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../types';
 
 interface SidebarProps {
@@ -16,6 +16,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, lang }) => {
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Painel de Controle' },
     { id: 'accounts', icon: Users, label: 'Contas & Personagens' },
+    { id: 'factions', icon: Flag, label: 'Clãs & Territórios' },
     { id: 'mail', icon: Mail, label: 'Correio & Itens' },
     { id: 'server', icon: Terminal, label: 'Operações do Servidor' },
     { id: 'settings', icon: Settings, label: 'Configurações' },

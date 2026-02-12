@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Lock, User, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../../types';
 import { APP_CONFIG } from '../../config/appConfig';
+import { PWApiService } from '../../services/pwApi';
 
 interface LoginViewProps {
   lang: Language;
@@ -21,15 +22,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ lang, setLang, onLogin }) 
     setLoading(true);
     setError('');
 
-    // Authentication Logic based on config/appConfig.ts
-    setTimeout(() => {
-      if (username === APP_CONFIG.admin.username && password === APP_CONFIG.admin.password) {
+    try {
+      const success = await PWApiService.login(username, password);
+      if (success) {
         onLogin();
       } else {
         setError(t('invalid_credentials'));
       }
+    } catch (err) {
+      setError(t('invalid_credentials'));
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (

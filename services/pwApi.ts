@@ -1,4 +1,3 @@
-
 import { 
   PWRole, PWVersion, InventoryItem, ChatMessage, MapInstance, 
   ServiceData, TradeLog, DashboardStats, 
@@ -6,94 +5,117 @@ import {
   PWFaction, MailPayload, BanHistoryEntry, SystemUser
 } from '../types';
 
-const API_TOKEN = '123456';
-const API_URL = 'http://95.111.235.239/apipw/index.php';
+const API_URL = 'http://localhost:3000/api';
 
 /**
- * PW INTELLIGENCE - API CONNECTOR
- * Centraliza todas as chamadas ao servidor PHP / Linux
+ * PW INTELLIGENCE - API CONNECTOR (Node.js Backend)
+ * Centralizes all calls to the Node.js API
  */
-const callApi = async (func: string, params: Record<string, any> = {}) => {
-    const body = new FormData();
-    body.append('token', API_TOKEN);
-    body.append('function', func);
-    Object.entries(params).forEach(([k, v]) => body.append(k, String(v)));
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('pw_token');
+  return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+};
 
-    try {
-        const response = await fetch(API_URL, { method: 'POST', body });
-        const json = await response.json();
-        if (json.status === 0 && json.error) throw new Error(json.error);
-        return json.retorno;
-    } catch (e) {
-        console.error(`Falha na Operação [${func}]:`, e);
-        return null;
-    }
+const callApi = async (endpoint: string, method: string = 'GET', body: any = null) => {
+  try {
+      const options: RequestInit = {
+          method,
+          headers: getAuthHeaders(),
+      };
+
+      if (body) {
+          options.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(`${API_URL}${endpoint}`, options);
+      
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('pw_token');
+        // Optional: Redirect to login or throw specific error
+        throw new Error('Unauthorized');
+      }
+
+      const json = await response.json();
+      if (json.error) throw new Error(json.error);
+      return json;
+  } catch (e: any) {
+      console.error(`Falha na Operação [${endpoint}]:`, e);
+      throw e;
+  }
 };
 
 export const PWApiService = {
   getCurrentVersion: () => '156',
-  getToken: () => API_TOKEN,
+  getToken: () => localStorage.getItem('pw_token'),
 
-  // --- CONTAS E PERSONAGENS (REALTIME DB) ---
+  // --- AUTHENTICATION ---
+  login: async (username: string, password: string) => {
+    const data = await callApi('/auth/login', 'POST', { username, password });
+    if (data.token) {
+      localStorage.setItem('pw_token', data.token);
+      localStorage.setItem('pw_user', JSON.stringify(data.user));
+      return true;
+    }
+    return false;
+  },
+  logout: () => {
+    localStorage.removeItem('pw_token');
+    localStorage.removeItem('pw_user');
+  },
+
+  // --- CONTAS E PERSONAGENS ---
   getAllRoles: async (): Promise<PWRole[]> => {
-      // Mapeia para ultimos-personagens pois listar TODOS é pesado
-      const data = await callApi('ultimos-personagens', { limit: 100 });
-      // Adapta o retorno do PHP para o tipo PWRole
-      return data ? data.map((r: any) => ({
-          base: { id: r.id, name: r.name, cls: r.cls, gender: r.gender, create_time: 0 },
-          status: { level: r.level, hp: 0, mp: 0 },
-          pocket: { money: 0, inv: [] },
-          user_login: r.login || 'Unknown',
-          isBanned: false
-      })) : [];
+      // Maps to Node.js /characters/search
+      try {
+        const data = await callApi('/characters/search?limit=100');
+        // Adapts Node.js return to PWRole type
+        return data.map((r: any) => ({
+            base: { id: r.id, name: r.name, cls: r.cls, gender: r.gender, create_time: 0 },
+            status: { level: r.level, hp: 0, mp: 0 },
+            pocket: { money: 0, inv: [] },
+            user_login: r.login || `UID:${r.userid}`,
+            isBanned: false
+        }));
+      } catch (e) {
+        return [];
+      }
   },
   
   getOnlineRolesFull: async (): Promise<PWRole[]> => {
-      const data = await callApi('online');
-      // O endpoint 'online' retorna lista simplificada.
-      // Idealmente, iterariamos para pegar detalhes, mas para performance,
-      // retornamos o básico mapeado para PWRole
-      return data ? data.map((r: any) => ({
-          base: { id: r.roleid, name: r.name, cls: 0, gender: 0, create_time: 0 }, // cls não vem no online list padrão as vezes
-          status: { level: 0, hp: 0, mp: 0, worldtag: r.map_id || 1, posx: 0, posz: 0 },
-          user_login: `UID:${r.userid}`,
-          isBanned: false
-      })) : [];
+      // TODO: Implement online check in Node.js
+      return [];
   },
 
-  getRoleDetail: async (id: number) => await callApi('detalhes-personagem', { roleid: id }),
+  getRoleDetail: async (id: number) => await callApi(`/characters/${id}`),
 
-  saveRole: async (id: number, data: any): Promise<boolean> => await callApi('salvar-personagem', { userid: id, data: JSON.stringify(data) }),
-  deleteRole: async (id: number): Promise<boolean> => await callApi('excluir-personagem', { userid: id }),
-  toggleBan: async (id: number): Promise<boolean> => await callApi('banir-desbanir', { userid: id }),
-  createAccount: async (login: string, pass: string, email: string): Promise<boolean> => await callApi('criar-conta', { login, pass, email }),
+  saveRole: async (id: number, data: any): Promise<boolean> => {
+    // TODO: Implement save in Node.js
+    console.warn('Save not implemented in backend yet');
+    return false;
+  },
+  deleteRole: async (id: number): Promise<boolean> => false, // TODO
+  toggleBan: async (id: number): Promise<boolean> => false, // TODO
+  createAccount: async (login: string, pass: string, email: string): Promise<boolean> => false, // TODO
   
-  getBanHistory: async (): Promise<BanHistoryEntry[]> => [], // Não implementado
+  getBanHistory: async (): Promise<BanHistoryEntry[]> => [], 
 
-  // --- INFRAESTRUTURA E SERVIÇOS (LINUX PIDs) ---
-  getServerServices: async (): Promise<ServiceData[]> => await callApi('server-services') || [],
-  getMapInstances: async (): Promise<MapInstance[]> => await callApi('map-instances') || [],
-  toggleService: async (id: string, action: string) => console.warn('Toggle Service not impl on PHP'),
-  toggleInstance: async (id: string, action: string) => console.warn('Toggle Instance not impl on PHP'),
+  // --- INFRAESTRUTURA E SERVIÇOS ---
+  getServerServices: async (): Promise<ServiceData[]> => [], // TODO
+  getMapInstances: async (): Promise<MapInstance[]> => [], // TODO
+  toggleService: async (id: string, action: string) => {},
+  toggleInstance: async (id: string, action: string) => {},
 
   // --- COMUNICAÇÃO E LOGS ---
-  getChat: async (): Promise<ChatMessage[]> => await callApi('chat-logs') || [],
-  sendSystemMessage: async (msg: string) => await callApi('broadcast', { text: msg }),
-  sendMail: async (payload: MailPayload) => await callApi('enviar-item', { 
-      roleid: payload.receiverId, 
-      title: payload.title, 
-      context: payload.content, 
-      item_id: payload.itemId, 
-      count: payload.count, 
-      money: payload.money 
-  }),
+  getChat: async (): Promise<ChatMessage[]> => [], // TODO
+  sendSystemMessage: async (msg: string) => {},
+  sendMail: async (payload: MailPayload) => {},
   getTradeLogs: async (): Promise<TradeLog[]> => [],
   getGameLogs: async (page: number, filters: any) => ({ logs: [], total: 0 }),
   readLogFile: async (file: string): Promise<string[]> => [],
 
   // --- CLÃS E DIPLOMACIA ---
-  getAllFactions: async (): Promise<PWFaction[]> => await callApi('lista-clãs') || [],
-  getFactionDetail: async (fid: number) => await callApi('detalhes-faccao', { fid }),
+  getAllFactions: async (): Promise<PWFaction[]> => [], // TODO
+  getFactionDetail: async (fid: number) => null, // TODO
   
   saveFaction: async (faction: PWFaction): Promise<boolean> => false,
   removeFactionMember: async (fid: number, roleId: number) => false,
@@ -102,8 +124,10 @@ export const PWApiService = {
   createFaction: async (name: string, masterId: number): Promise<boolean> => false,
 
   // --- SEGURANÇA E DASHBOARD ---
-  getDashboardStats: async (): Promise<DashboardStats> => await callApi('stats-servidor'),
-  getTerritories: async () => await callApi('territorios') || [],
+  getDashboardStats: async (): Promise<DashboardStats> => ({
+      time: '00:00', cpu: 0, ram: 0, ram_total: 16, swap: 0, swap_total: 0, players: 0, net_in: 0, net_out: 0
+  }), // TODO
+  getTerritories: async () => [], // TODO
   
   getSecurityThreats: async (): Promise<ThreatLog[]> => [],
   getAuditLogs: async (): Promise<AuditEntry[]> => [],
@@ -115,10 +139,10 @@ export const PWApiService = {
   saveServerSettings: async (settings: any): Promise<boolean> => false,
 
   // --- RAW EDITOR (JSON) ---
-  getRoleXml: async (id: number) => await callApi('get-role-data', { userid: id }),
-  saveRoleXml: async (id: number, xml: string) => await callApi('save-role-data', { userid: id, xml }),
+  getRoleXml: async (id: number) => null, // TODO
+  saveRoleXml: async (id: number, xml: string) => false, // TODO
 
   // --- LUA CONFIG MANAGER ---
-  getLuaConfig: async (): Promise<string> => await callApi('get-lua-config'),
-  saveLuaConfig: async (content: string): Promise<boolean> => await callApi('save-lua-config', { content })
+  getLuaConfig: async (): Promise<string> => '', // TODO
+  saveLuaConfig: async (content: string): Promise<boolean> => false
 };

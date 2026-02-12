@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw, Trash2, PlusCircle, Flag, Edit, User, Swords, ShieldAlert, CheckCircle, Loader2, Info } from 'lucide-react';
+import { Search, RefreshCw, Trash2, PlusCircle, Flag, Edit, User, Swords, ShieldAlert, CheckCircle, Loader2, Info, Map as MapIcon, Globe } from 'lucide-react';
 import { Language, TRANSLATIONS, PWFaction, PW_DATA } from '../../types';
 import { PWApiService } from '../../services/pwApi';
 import FactionEditor from './FactionEditor';
+import { TerritoryMap } from './TerritoryMap';
 
 interface FactionsViewProps {
   lang: Language;
@@ -10,6 +11,8 @@ interface FactionsViewProps {
 
 export const FactionsView: React.FC<FactionsViewProps> = ({ lang }) => {
   const t = (key: string) => TRANSLATIONS[key]?.[lang] || key;
+  const [activeTab, setActiveTab] = useState<'list' | 'map' | 'nw'>('list');
+  
   const [factions, setFactions] = useState<PWFaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -57,7 +60,47 @@ export const FactionsView: React.FC<FactionsViewProps> = ({ lang }) => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
-      <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+      
+      {/* TABS HEADER */}
+      <div className="flex space-x-1 bg-slate-900/50 p-1 rounded-2xl w-fit border border-slate-700">
+          <button 
+            onClick={() => setActiveTab('list')}
+            className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center ${activeTab === 'list' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+          >
+             <Flag className="w-4 h-4 mr-2" /> {t('factions') || 'Clãs'}
+          </button>
+          <button 
+            onClick={() => setActiveTab('map')}
+            className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center ${activeTab === 'map' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-500 hover:text-white'}`}
+          >
+             <MapIcon className="w-4 h-4 mr-2" /> Mapa Territorial
+          </button>
+          <button 
+            onClick={() => setActiveTab('nw')}
+            className={`px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center ${activeTab === 'nw' ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20' : 'text-slate-500 hover:text-white'}`}
+          >
+             <Globe className="w-4 h-4 mr-2" /> Guerra da Nações
+          </button>
+      </div>
+
+      {activeTab === 'map' && (
+          <TerritoryMap lang={lang} factions={factions} />
+      )}
+
+      {activeTab === 'nw' && (
+          <div className="bg-slate-900/50 border border-slate-700 rounded-[2rem] p-10 text-center">
+              <Globe className="w-16 h-16 text-purple-500 mx-auto mb-4 opacity-50" />
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Guerra das Nações (Nation War)</h2>
+              <p className="text-slate-500 mt-2 max-w-lg mx-auto">O módulo de configuração de Nation War requer acesso ao arquivo <code className="text-purple-400">gs.conf</code> e <code className="text-purple-400">is32</code>. A estrutura de dados está sendo implementada no backend.</p>
+              <button className="mt-8 px-8 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-white font-bold uppercase text-xs tracking-widest">
+                  Carregar Configuração (Beta)
+              </button>
+          </div>
+      )}
+
+      {activeTab === 'list' && (
+        <>
+        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-3 text-slate-500 w-5 h-5" />
           <input 
@@ -138,6 +181,9 @@ export const FactionsView: React.FC<FactionsViewProps> = ({ lang }) => {
           </tbody>
         </table>
       </div>
+      </>
+      )}
+
 
       {/* MODAL INICIAR TW MANUAL */}
       {showTwModal && (

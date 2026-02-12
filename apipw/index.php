@@ -24,8 +24,10 @@ $retorno = array('status' => 0, 'retorno' => '', 'error' => '');
 // --- DATABASE HELPER FUNCTIONS ---
 $db_connection = null;
 
+$db_error = '';
+
 function getDBConnection() {
-    global $db_connection, $configs;
+    global $db_connection, $configs, $db_error;
     if ($db_connection) return $db_connection;
 
     try {
@@ -38,6 +40,7 @@ function getDBConnection() {
         $db_connection = new PDO($dsn, $configs['db_user'], $configs['db_pass'], $options);
         return $db_connection;
     } catch (PDOException $e) {
+        $db_error = $e->getMessage();
         return null;
     }
 }
@@ -106,16 +109,48 @@ try {
             $email = getParam('email');
             
             $db = getDBConnection();
-            if (!$db) throw new Exception("Erro de conexão com Banco de Dados MySQL");
+            if (!$db) throw new Exception("Erro de conexão com Banco de Dados MySQL: " . $db_error);
             
+            // Generate MD5 Base64 Hash (Standard PW Auth)
+            // Note: PW uses binary MD5 then Base64.
+            // md5($str, true) returns raw binary. base64_encode converts to string.
             $passHash = base64_encode(md5($login . $pass, true)); 
 
             try {
+                // Try using the Stored Procedure 'adduser' which is standard in many PW server setups
+                // It handles ID generation (max(id)+16) and other defaults
                 $stmt = $db->prepare("CALL adduser(:login, :pass, '0', '0', '0', '0', :email, '0', '0', '0', '0', '0', '0', '0', '', '', '0')");
                 $stmt->execute(['login' => $login, 'pass' => $passHash, 'email' => $email]);
             } catch (PDOException $e) {
-                $stmt = $db->prepare("INSERT INTO users (name, passwd, email, creatime) VALUES (:login, :pass, :email, NOW())");
-                $stmt->execute(['login' => $login, 'pass' => $passHash, 'email' => $email]);
+                // Fallback: If procedure doesn't exist, insert manually into 'users' table
+                // We need to calculate the next ID manually if not auto-increment (PW uses logic ID = max+16 usually)
+                try {
+                    // Check if users table has auto_increment or we need to calc ID
+                    // The provided structure shows ID is NOT auto_increment (default 0).
+                    
+                    // Get Max ID
+                    $idQuery = $db->query("SELECT MAX(ID) as max_id FROM users");
+                    $row = $idQuery->fetch();
+                    $nextId = ($row['max_id'] && $row['max_id'] > 16) ? $row['max_id'] + 16 : 32; // Default start
+                    
+                    // Adjust column names based on the structure provided by user
+                    // User provided: ID, name, passwd, Prompt, answer, truename, idnumber, email, ...
+                    $insert = "INSERT INTO users (ID, name, passwd, email, creatime, Prompt, answer, truename, idnumber) 
+                               VALUES (:id, :login, :pass, :email, NOW(), 'PwAdmin', 'PwAdmin', '', '')";
+                               
+                    $stmt = $db->prepare($insert);
+                    $stmt->execute([
+                        'id' => $nextId,
+                        'login' => $login, 
+                        'pass' => $passHash, 
+                        'email' => $email
+                    ]);
+                    
+                } catch (PDOException $e2) {
+                    $retorno['status'] = 0;
+                    $retorno['error'] = "Falha ao criar conta: " . $e2->getMessage();
+                    break;
+                }
             }
             
             $retorno['status'] = 1;
@@ -392,23 +427,65 @@ try {
             $db = getDBConnection();
             if (!$db) {
                 $retorno['status'] = 0;
-                $retorno['error'] = "Sem conexão MySQL";
+                $retorno['error'] = "Sem conexão MySQL: " . $db_error;
             } else {
                 try {
                     // Verifica se tabela roles existe
                     $check = $db->query("SHOW TABLES LIKE 'roles'");
                     if ($check->rowCount() > 0) {
+                        // Discover columns dynamically to avoid "Unknown column" error
+                        $desc = $db->query("DESCRIBE roles")->fetchAll(PDO::FETCH_COLUMN);
+                        
+                        $colId = in_array('id', $desc) ? 'id' : (in_array('roleid', $desc) ? 'roleid' : null);
+                        $colName = in_array('name', $desc) ? 'name' : (in_array('rolename', $desc) ? 'rolename' : null);
+                        $colLevel = in_array('level', $desc) ? 'level' : null;
+                        $colCls = in_array('cls', $desc) ? 'cls' : (in_array('class', $desc) ? 'class' : null);
+                        $colGender = in_array('gender', $desc) ? 'gender' : null;
+                        $colUserId = in_array('userid', $desc) ? 'userid' : (in_array('user_id', $desc) ? 'user_id' : null);
+                        
+                        if (!$colId || !$colUserId) {
+                             throw new Exception("Tabela 'roles' não possui colunas ID ou UserID reconhecidas.");
+                        }
+
                         $limit = isset($_POST['limit']) ? (int)$_POST['limit'] : 50;
+                        
+                        // Build Query Dynamically
+                        $selects = ["r.$colId as id", "r.$colUserId as userid"];
+                        if ($colName) $selects[] = "r.$colName as name";
+                        if ($colLevel) $selects[] = "r.$colLevel as level";
+                        if ($colCls) $selects[] = "r.$colCls as cls";
+                        if ($colGender) $selects[] = "r.$colGender as gender";
+                        $selects[] = "u.name as login";
+                        
+                        $selectStr = implode(', ', $selects);
+                        
                         // JOIN com users para pegar o login
-                        $sql = "SELECT r.id, r.name, r.level, r.cls, r.gender, u.name as login 
+                        $sql = "SELECT $selectStr 
                                 FROM roles r 
-                                LEFT JOIN users u ON r.userid = u.ID 
-                                ORDER BY r.id DESC LIMIT :limit";
+                                LEFT JOIN users u ON r.$colUserId = u.ID 
+                                ORDER BY r.$colId DESC LIMIT :limit";
+                                
                         $stmt = $db->prepare($sql);
                         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
                         $stmt->execute();
+                        $data = $stmt->fetchAll();
+                        
+                        // Normalize output for frontend (ensure keys exist)
+                        $normalized = [];
+                        foreach($data as $row) {
+                            $normalized[] = [
+                                'id' => $row['id'],
+                                'name' => isset($row['name']) ? $row['name'] : 'Unknown',
+                                'level' => isset($row['level']) ? $row['level'] : 0,
+                                'cls' => isset($row['cls']) ? $row['cls'] : 0,
+                                'gender' => isset($row['gender']) ? $row['gender'] : 0,
+                                'login' => isset($row['login']) ? $row['login'] : 'Unknown',
+                                'userid' => $row['userid']
+                            ];
+                        }
+                        
                         $retorno['status'] = 1;
-                        $retorno['retorno'] = $stmt->fetchAll();
+                        $retorno['retorno'] = $normalized;
                     } else {
                         $retorno['status'] = 0;
                         $retorno['error'] = "Tabela 'roles' não encontrada.";
