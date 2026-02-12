@@ -5,7 +5,7 @@ import {
   PWFaction, MailPayload, BanHistoryEntry, SystemUser
 } from '../types';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 /**
  * PW INTELLIGENCE - API CONNECTOR (Node.js Backend)
@@ -82,8 +82,19 @@ export const PWApiService = {
   },
   
   getOnlineRolesFull: async (): Promise<PWRole[]> => {
-      // TODO: Implement online check in Node.js
-      return [];
+      try {
+        const data = await callApi('/status/realtime');
+        // Converts the simplified list from PHP into the structure expected by the frontend
+        return data.players.list.map((p: any) => ({
+            base: { id: p.id, name: p.name, cls: 0, gender: 0, create_time: 0 }, // Minimal info
+            status: { level: 0, hp: 0, mp: 0 },
+            pocket: { money: 0, inv: [] },
+            user_login: `UID:${p.uid}`,
+            isBanned: false
+        }));
+      } catch (e) {
+          return [];
+      }
   },
 
   getRoleDetail: async (id: number) => await callApi(`/characters/${id}`),
@@ -95,38 +106,137 @@ export const PWApiService = {
   },
   deleteRole: async (id: number): Promise<boolean> => false, // TODO
   toggleBan: async (id: number): Promise<boolean> => false, // TODO
-  createAccount: async (login: string, pass: string, email: string): Promise<boolean> => false, // TODO
+  createAccount: async (login: string, pass: string, email: string): Promise<boolean> => {
+      try {
+          const data = await callApi('/auth/create', 'POST', { login, password: pass, email });
+          return data.success;
+      } catch (e) {
+          console.error("Create account error", e);
+          return false;
+      }
+  },
   
   getBanHistory: async (): Promise<BanHistoryEntry[]> => [], 
 
   // --- INFRAESTRUTURA E SERVIÇOS ---
-  getServerServices: async (): Promise<ServiceData[]> => [], // TODO
-  getMapInstances: async (): Promise<MapInstance[]> => [], // TODO
+  getServerServices: async (): Promise<ServiceData[]> => {
+      try {
+        const data = await callApi('/status/realtime');
+        return data.services.details.map((s: any, index: number) => ({
+            id: `srv-${index}`,
+            name: s.name,
+            status: s.status === '[ONLINE]' ? 'online' : 'offline',
+            uptime: '---',
+            cpu: parseFloat(s.cpu.replace('%', '')),
+            memory: parseFloat(s.ram.replace('%', '')),
+            pid: 0 // PID is not parsed in detail yet
+        }));
+      } catch (e) {
+          return [];
+      }
+  },
+  getMapInstances: async (): Promise<MapInstance[]> => {
+      try {
+        const data = await callApi('/status/realtime');
+        return data.maps.details.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            status: 'online',
+            players: 0, // Not available in simple view
+            cpu: parseFloat(m.cpu.replace('%', '')),
+            memory: parseFloat(m.ram.replace('%', ''))
+        }));
+      } catch (e) {
+          return [];
+      }
+  },
   toggleService: async (id: string, action: string) => {},
   toggleInstance: async (id: string, action: string) => {},
 
   // --- COMUNICAÇÃO E LOGS ---
-  getChat: async (): Promise<ChatMessage[]> => [], // TODO
-  sendSystemMessage: async (msg: string) => {},
+  getChat: async (): Promise<ChatMessage[]> => {
+      try {
+        const data = await callApi('/logs/chat');
+        // Map backend Log format to Frontend ChatMessage format
+        return data.map((log: any) => ({
+            id: Math.random(),
+            message: log.msg || log.raw || '', // Map 'msg'/'raw' to 'message'
+            channel: log.channel ? log.channel.toLowerCase() : 'world',
+            roleName: log.srcName || 'System', // Map 'srcName' to 'roleName'
+            roleId: log.srcId || 0,
+            timestamp: log.date ? log.date.split(' ')[1] : new Date().toLocaleTimeString() // Map 'date' to 'timestamp'
+        }));
+      } catch (e) {
+          console.error("Chat error", e);
+          return [];
+      }
+  },
+  sendSystemMessage: async (msg: string) => {
+      try {
+          await callApi('/logs/chat/send', 'POST', { msg, channel: 9 });
+      } catch (e) {
+          console.error("Send chat error", e);
+      }
+  },
   sendMail: async (payload: MailPayload) => {},
   getTradeLogs: async (): Promise<TradeLog[]> => [],
   getGameLogs: async (page: number, filters: any) => ({ logs: [], total: 0 }),
   readLogFile: async (file: string): Promise<string[]> => [],
 
   // --- CLÃS E DIPLOMACIA ---
-  getAllFactions: async (): Promise<PWFaction[]> => [], // TODO
-  getFactionDetail: async (fid: number) => null, // TODO
+  getAllFactions: async (): Promise<PWFaction[]> => {
+      try {
+          return await callApi('/server/factions');
+      } catch (e) {
+          return [];
+      }
+  },
   
+  getFactionDetail: async (fid: number) => null, // TODO: Implement detail if needed
+
   saveFaction: async (faction: PWFaction): Promise<boolean> => false,
   removeFactionMember: async (fid: number, roleId: number) => false,
   addFactionMember: async (fid: number, roleId: number) => false,
   initTerritoryWar: async (mapId: number, attackerId: number, defenderId: number) => false,
   createFaction: async (name: string, masterId: number): Promise<boolean> => false,
 
-  // --- SEGURANÇA E DASHBOARD ---
-  getDashboardStats: async (): Promise<DashboardStats> => ({
-      time: '00:00', cpu: 0, ram: 0, ram_total: 16, swap: 0, swap_total: 0, players: 0, net_in: 0, net_out: 0
-  }), // TODO
+  toggleNationWar: async (enable: boolean): Promise<boolean> => {
+      try {
+          const res = await callApi('/server/nw/toggle', 'POST', { enable });
+          return res.success;
+      } catch (e) {
+          console.error("NW Toggle error", e);
+          return false;
+      }
+  },
+
+  getTerritories: async (): Promise<PWTerritory[]> => {
+      try {
+          return await callApi('/server/territories');
+      } catch (e) {
+          console.error("Territories error", e);
+          return [];
+      }
+  },
+      try {
+        const data = await callApi('/status/realtime');
+        return {
+            time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            cpu: parseFloat(data.system.load_average.split(',')[0]) * 10, // Rough estimate from load avg
+            ram: parseFloat(data.system.memory.used.replace('MB', '')) / 1024,
+            ram_total: parseFloat(data.system.memory.total.replace('MB', '')) / 1024,
+            swap: 0,
+            swap_total: 0,
+            players: data.players.online_count,
+            net_in: 0,
+            net_out: 0
+        };
+      } catch (e) {
+          return {
+              time: '00:00', cpu: 0, ram: 0, ram_total: 16, swap: 0, swap_total: 0, players: 0, net_in: 0, net_out: 0
+          };
+      }
+  },
   getTerritories: async () => [], // TODO
   
   getSecurityThreats: async (): Promise<ThreatLog[]> => [],

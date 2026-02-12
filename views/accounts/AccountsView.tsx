@@ -75,6 +75,21 @@ export const AccountsView: React.FC<AccountsViewProps> = ({ lang }) => {
   return (
     <div className="space-y-6 animate-fadeIn pb-10">
       
+      {/* Hero Section */}
+      <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl mb-8">
+          <div className="absolute top-0 right-0 p-10 opacity-5">
+              <UserCog className="w-64 h-64 text-white" />
+          </div>
+          <div className="p-8 relative z-10">
+              <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">{t('characters') || (lang === 'pt' ? "Personagens" : "Characters")}</h2>
+              <p className="text-slate-400 text-sm max-w-xl">
+                  {lang === 'pt' 
+                    ? 'Gerencie contas, personagens, inventários e permissões de acesso.' 
+                    : 'Manage accounts, characters, inventories, and access permissions.'}
+              </p>
+          </div>
+      </div>
+
       {/* Header & Main Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="relative w-full md:w-[600px]">

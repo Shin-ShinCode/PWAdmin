@@ -73,7 +73,22 @@ export const DashboardView: React.FC<DashboardProps> = ({ lang, setView }) => {
   }));
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-10 animate-fadeIn">
+      {/* Hero Section */}
+      <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl mb-8">
+          <div className="absolute top-0 right-0 p-10 opacity-5">
+              <Activity className="w-64 h-64 text-white" />
+          </div>
+          <div className="p-8 relative z-10">
+              <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tighter">{lang === 'pt' ? 'Painel de Controle' : 'Dashboard'}</h2>
+              <p className="text-slate-400 text-sm max-w-xl">
+                  {lang === 'pt' 
+                    ? 'Visão geral em tempo real da infraestrutura, jogadores e saúde do servidor.' 
+                    : 'Real-time overview of infrastructure, players, and server health.'}
+              </p>
+          </div>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Online Players */}

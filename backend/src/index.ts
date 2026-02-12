@@ -6,6 +6,9 @@ import { checkConnection } from './config/database';
 import { initDb } from './utils/initDb';
 import authRoutes from './routes/authRoutes';
 import characterRoutes from './routes/characterRoutes';
+import statusRoutes from './routes/statusRoutes';
+import logRoutes from './routes/logRoutes';
+import serverRoutes from './routes/serverRoutes';
 
 dotenv.config();
 
@@ -20,6 +23,9 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/characters', characterRoutes);
+app.use('/api/status', statusRoutes);
+app.use('/api/logs', logRoutes);
+app.use('/api/server', serverRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -29,10 +35,16 @@ app.get('/', (req, res) => {
 // Start Server
 const startServer = async () => {
   const dbConnected = await checkConnection();
-  if (!dbConnected) {
-    console.error('CRITICAL: Could not connect to database. Server starting in limited mode.');
+  
+  if (dbConnected) {
+    try {
+      await initDb();
+    } catch (e) {
+      console.error('Failed to init DB:', e);
+    }
   } else {
-    await initDb();
+    console.warn('⚠️  SERVER RUNNING IN OFFLINE MODE (MOCK DB) ⚠️');
+    console.warn('Real database connection failed. Data will be simulated.');
   }
 
   app.listen(port, () => {

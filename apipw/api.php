@@ -810,6 +810,41 @@ class API {
         return $online;
     }
 
+    public function getChat($lines = 50) {
+        $logFile = '/PWServer/logs/world2.chat'; // Caminho padrão dos logs de chat
+        
+        // Verifica logs rotacionados se o atual estiver vazio ou não existir
+        if (!file_exists($logFile) || filesize($logFile) == 0) {
+             // Tenta encontrar o log mais recente
+             $files = glob('/PWServer/logs/world2.chat*');
+             if ($files) {
+                 usort($files, function($a, $b) {
+                     return filemtime($b) - filemtime($a);
+                 });
+                 $logFile = $files[0];
+             }
+        }
+
+        if (file_exists($logFile)) {
+            // Leitura eficiente das últimas linhas
+            $output = [];
+            exec("tail -n $lines " . escapeshellarg($logFile), $output);
+            
+            // Parser simples para estruturar o log
+            $parsedLogs = [];
+            foreach ($output as $line) {
+                // Formato típico: date time function [roleid=X] msg
+                // Ex: 2023-10-20 10:00:00 Chat::Talk: src=1024 dst=0 channel=0 msg=Oi
+                
+                // Vamos retornar a linha bruta por enquanto se o parser falhar
+                $parsedLogs[] = ['raw' => $line];
+            }
+            return $parsedLogs;
+        }
+        
+        return [];
+    }
+
     public function serverOnline() {
         return @fsockopen(settings('server_ip', '127.0.0.1'), config('pw-api.ports.client'), $errCode, $errStr, 1) ? TRUE : FALSE;
     }

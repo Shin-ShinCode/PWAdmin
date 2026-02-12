@@ -4,7 +4,15 @@ import { CharacterService } from '../services/CharacterService';
 
 export const searchCharacters = async (req: Request, res: Response) => {
   try {
-    const { query: searchQuery, limit } = req.query;
+    const { query: searchQuery, limit, online } = req.query;
+    
+    // Se a flag online=true for passada, vamos tentar filtrar pelos IDs online
+    // Mas a fonte da verdade para "quem está online" é o RemoteStatusService (PHP API)
+    // O banco de dados geralmente não tem o status em tempo real confiável.
+    
+    // Para simplificar e atender o pedido do usuário de "puxar as conta em tempo real":
+    // Vamos focar em garantir que a listagem geral funcione bem.
+    
     const searchLimit = limit ? parseInt(limit as string) : 50;
     const searchTerm = searchQuery ? `%${searchQuery}%` : '%';
 

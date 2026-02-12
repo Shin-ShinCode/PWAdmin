@@ -18,6 +18,95 @@ try {
     $apiError = $e->getMessage();
 }
 
+// --- API ACTIONS (POST/GET) ---
+if (isset($_REQUEST['action'])) {
+    header('Content-Type: application/json');
+    $action = $_REQUEST['action'];
+    
+    if ($action === 'send_chat') {
+        $msg = $_REQUEST['msg'] ?? '';
+        $channel = $_REQUEST['channel'] ?? 9; // 9 = Broadcast/System
+        $roleId = $_REQUEST['role_id'] ?? 1024; // GM ID ou System ID fictício
+        
+        if ($api && $msg) {
+            // Tenta enviar como mensagem de sistema (Broadcast)
+            // Canal 9 costuma ser mensagem amarela/sistema central
+            try {
+                $result = $api->WorldChat($roleId, $msg, $channel);
+                echo json_encode(['success' => true, 'result' => $result]);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+        } else {
+            echo json_encode(['success' => false, 'error' => 'API not init or missing msg']);
+        }
+        exit;
+    }
+    
+    if ($action === 'get_territories') {
+        if ($api) {
+            try {
+                $territories = $api->getTerritories();
+                echo json_encode(['success' => true, 'data' => $territories]);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+        } else {
+            echo json_encode(['success' => false, 'error' => 'API not initialized']);
+        }
+        exit;
+    }
+
+    if ($action === 'get_factions') {
+        // Direct MySQL Query for Factions
+        try {
+            $dsn = "mysql:host=127.0.0.1;dbname=pw;charset=utf8mb4";
+            $pdo = new PDO($dsn, "root", "root");
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            
+            // Fetch basic faction info
+            $stmt = $pdo->query("SELECT fid, name, level, master, count, announcement FROM factions ORDER BY level DESC, fid ASC");
+            $factions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'data' => $factions]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($action === 'toggle_nw') {
+        $enable = $_REQUEST['enable'] === 'true';
+        $gsConf = '/PWServer/gamed/config/gs.conf';
+        
+        if (file_exists($gsConf)) {
+            $content = file_get_contents($gsConf);
+            
+            // Regex to find battlefield setting
+            // Pattern: battlefield=0 or battlefield=1
+            if ($enable) {
+                $newContent = preg_replace('/battlefield\s*=\s*0/', 'battlefield=1', $content);
+                // Also check if it doesn't exist, append it? Usually it exists.
+            } else {
+                $newContent = preg_replace('/battlefield\s*=\s*1/', 'battlefield=0', $content);
+            }
+            
+            if ($content !== $newContent) {
+                if (file_put_contents($gsConf, $newContent)) {
+                    echo json_encode(['success' => true, 'message' => 'Configuration updated. Restart gamed to apply.']);
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Failed to write to gs.conf (Permission denied?)']);
+                }
+            } else {
+                echo json_encode(['success' => true, 'message' => 'Configuration already set.']);
+            }
+        } else {
+            echo json_encode(['success' => false, 'error' => 'gs.conf not found']);
+        }
+        exit;
+    }
+}
+
 echo "=== RELATÓRIO COMPLETO DE INFRAESTRUTURA E DADOS PW (PWServer) ===\n"; 
 echo "Gerado em: " . date('Y-m-d H:i:s') . "\n"; 
 echo "Servidor: " . $configs['ip'] . " (Local Mode)\n";
@@ -381,6 +470,39 @@ echo "Memória: $free\n";
 $disk = shell_exec("df -h /PWServer | tail -1 | awk '{print \"Total: \" $2 \" | Usado: \" $3 \" (\" $5 \") | Livre: \" $4}'"); 
 echo "Disco (/PWServer): " . ($disk ? $disk : "N/A") . "\n"; 
 
-echo "\n================================================\n"; 
+// 7. CHAT LOGS (VIA TAIL)
+echo "[7] CHAT LOGS (LAST 10)...\n";
+$chatLogs = $api->getChat(10);
+if ($chatLogs) {
+    foreach ($chatLogs as $log) {
+        echo "   " . $log['raw'] . "\n";
+    }
+} else {
+    echo "   (Nenhum log de chat recente ou arquivo inacessível)\n";
+}
+// 8. NATION WAR (CONFIG CHECK)
+echo "[8] NATION WAR CONFIG...\n";
+$gsConf = '/PWServer/gamed/config/gs.conf';
+$is32 = '/PWServer/gamed/config/is32';
+
+if (file_exists($gsConf)) {
+    echo "gs.conf encontrado.\n";
+    // Basic check for NW enabled
+    $content = file_get_contents($gsConf);
+    if (strpos($content, 'battlefield=1') !== false) {
+        echo "Nation War (Battlefield) habilitado no gs.conf.\n";
+    } else {
+        echo "Nation War não parece estar habilitado no gs.conf.\n";
+    }
+} else {
+    echo "gs.conf não encontrado.\n";
+}
+
+if (file_exists($is32)) {
+    echo "Pasta is32 encontrada (Instância de NW).\n";
+} else {
+    echo "Pasta is32 não encontrada.\n";
+}
+echo "\n================================================\n";
 echo "FIM DO RELATÓRIO"; 
 ?>

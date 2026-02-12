@@ -25,7 +25,7 @@ class MockDatabase {
 
     // Seed Admin User
     const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash('admin123', salt);
+    const hash = await bcrypt.hash('admin', salt);
     this.tables.admin_users = [
       { 
         id: 1, 

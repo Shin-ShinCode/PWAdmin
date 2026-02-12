@@ -269,6 +269,23 @@ export const TRANSLATIONS: Translation = {
   cpu: { pt: 'Uso de CPU', en: 'CPU Usage' },
   memory_ram_swap: { pt: 'Memória & SWAP', en: 'Memory & SWAP' },
   network_traffic: { pt: 'Tráfego de Rede', en: 'Network Traffic' },
+  processes: { pt: 'Processos', en: 'Processes' },
+  map_monitor: { pt: 'Instâncias', en: 'Map Monitor' },
+  console_output: { pt: 'Console', en: 'Console' },
+  chat_monitor: { pt: 'Monitor de Chat', en: 'Chat Monitor' },
+  trade_logs: { pt: 'Logs de Troca', en: 'Trade Logs' },
+  broadcast_placeholder: { pt: 'Digite uma mensagem para o servidor...', en: 'Type a message to server...' },
+  send: { pt: 'Enviar', en: 'Send' },
+  live: { pt: 'Ao Vivo', en: 'Live' },
+  paused: { pt: 'Pausado', en: 'Paused' },
+  search: { pt: 'Buscar...', en: 'Search...' },
+  create_account: { pt: 'Criar Conta', en: 'Create Account' },
+  no_results: { pt: 'Nenhum resultado encontrado', en: 'No results found' },
+  bans: { pt: 'Banimentos', en: 'Bans' },
+  account_character: { pt: 'Conta / Personagem', en: 'Account / Character' },
+  level_class: { pt: 'Nível / Classe', en: 'Level / Class' },
+  actions: { pt: 'Ações', en: 'Actions' },
+  no_bans: { pt: 'Nenhum banimento registrado', en: 'No bans recorded' },
 };
 
 export const PW_DATA = {

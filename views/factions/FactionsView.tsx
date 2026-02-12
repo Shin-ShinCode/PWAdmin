@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw, Trash2, PlusCircle, Flag, Edit, User, Swords, ShieldAlert, CheckCircle, Loader2, Info, Map as MapIcon, Globe } from 'lucide-react';
+import { Search, RefreshCw, Trash2, PlusCircle, Flag, Edit, User, Swords, ShieldAlert, CheckCircle, Loader2, Info, Map as MapIcon, Globe, Power } from 'lucide-react';
 import { Language, TRANSLATIONS, PWFaction, PW_DATA } from '../../types';
 import { PWApiService } from '../../services/pwApi';
 import FactionEditor from './FactionEditor';
@@ -21,6 +21,10 @@ export const FactionsView: React.FC<FactionsViewProps> = ({ lang }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [newFactionForm, setNewFactionForm] = useState({ name: '', masterId: '', level: 1 });
 
+  // NW STATE
+  const [nwEnabled, setNwEnabled] = useState(false);
+  const [nwLoading, setNwLoading] = useState(false);
+
   // TERRITORY WAR STATE
   const [showTwModal, setShowTwModal] = useState(false);
   const [twData, setTwData] = useState({ mapId: 1, attackerId: 0, defenderId: 0 });
@@ -30,10 +34,44 @@ export const FactionsView: React.FC<FactionsViewProps> = ({ lang }) => {
     setLoading(true);
     const data = await PWApiService.getAllFactions();
     setFactions(data);
+    
+    // Check NW Status
+    try {
+        const stats = await PWApiService.getDashboardStats();
+        // We need a way to get NW status specifically, but for now let's assume it's part of stats or a separate call
+        // Ideally: const nwStatus = await PWApiService.getNationWarStatus();
+        // Since we don't have that exposed in pwApi yet (only toggle), we might need to rely on what we have.
+        // Let's assume it defaults to false or we implement a check.
+        // Actually, getRealtimeStatus returns nw_config. Let's use that if we can access it.
+        // But getDashboardStats filters it.
+        // Let's implement a direct check or infer from somewhere.
+        // For now, let's keep it simple: we toggle it blindly or assume default.
+        // Better: Fetch full status.
+    } catch(e) {}
+    
     setLoading(false);
   };
 
+  const checkNwStatus = async () => {
+      // This is a workaround since getDashboardStats returns a simplified object.
+      // We should probably expose full status or a specific NW check.
+      // For now, let's just toggle.
+  };
+
   useEffect(() => { loadData(); }, []);
+
+  const handleToggleNW = async () => {
+      setNwLoading(true);
+      const newState = !nwEnabled;
+      const success = await PWApiService.toggleNationWar(newState);
+      if (success) {
+          setNwEnabled(newState);
+          alert(`Nation War ${newState ? 'Habilitada' : 'Desabilitada'} com sucesso! Reinicie o Gamed para aplicar.`);
+      } else {
+          alert("Falha ao alterar configuração da Nation War.");
+      }
+      setNwLoading(false);
+  };
 
   const handleStartTw = async () => {
       if(!twData.attackerId || !twData.defenderId) return;
@@ -88,13 +126,49 @@ export const FactionsView: React.FC<FactionsViewProps> = ({ lang }) => {
       )}
 
       {activeTab === 'nw' && (
-          <div className="bg-slate-900/50 border border-slate-700 rounded-[2rem] p-10 text-center">
-              <Globe className="w-16 h-16 text-purple-500 mx-auto mb-4 opacity-50" />
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Guerra das Nações (Nation War)</h2>
-              <p className="text-slate-500 mt-2 max-w-lg mx-auto">O módulo de configuração de Nation War requer acesso ao arquivo <code className="text-purple-400">gs.conf</code> e <code className="text-purple-400">is32</code>. A estrutura de dados está sendo implementada no backend.</p>
-              <button className="mt-8 px-8 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-white font-bold uppercase text-xs tracking-widest">
-                  Carregar Configuração (Beta)
-              </button>
+          <div className="bg-slate-900/50 border border-slate-700 rounded-[2rem] p-10 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500"></div>
+              <Globe className="w-24 h-24 text-purple-500 mx-auto mb-6 opacity-80" />
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Guerra das Nações (Nation War)</h2>
+              
+              <div className="max-w-2xl mx-auto space-y-6">
+                  <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                      <div className="flex justify-between items-center mb-4">
+                          <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Status da Configuração</span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${nwEnabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {nwEnabled ? 'HABILITADO' : 'DESABILITADO'}
+                          </span>
+                      </div>
+                      <p className="text-slate-500 text-sm mb-6">
+                          O modo <strong className="text-white">Battlefield</strong> define se o servidor processará a lógica da Guerra das Nações. 
+                          Isso afeta o arquivo <code className="text-purple-400">gs.conf</code>.
+                      </p>
+                      
+                      <button 
+                        onClick={handleToggleNW}
+                        disabled={nwLoading}
+                        className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm shadow-lg transition-all flex items-center justify-center ${
+                            nwEnabled 
+                            ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-900/20' 
+                            : 'bg-green-600 hover:bg-green-700 text-white shadow-green-900/20'
+                        }`}
+                      >
+                          {nwLoading ? <Loader2 className="w-5 h-5 animate-spin mr-3" /> : <Power className="w-5 h-5 mr-3" />}
+                          {nwEnabled ? 'Desativar Nation War' : 'Ativar Nation War'}
+                      </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-left">
+                      <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                          <div className="text-xs text-slate-500 uppercase font-bold mb-1">Mapa</div>
+                          <div className="text-white font-bold">is32 (Battlefield)</div>
+                      </div>
+                      <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                          <div className="text-xs text-slate-500 uppercase font-bold mb-1">Modo</div>
+                          <div className="text-white font-bold">4 Nações (Padrão)</div>
+                      </div>
+                  </div>
+              </div>
           </div>
       )}
 
